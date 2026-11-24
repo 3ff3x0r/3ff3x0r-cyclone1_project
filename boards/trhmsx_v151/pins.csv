@@ -153,7 +153,7 @@ cartridge,cart_a11,141,Net-(RN11C-R3.2),J13-19; J16-19,/A11,input,release,ipc_qs
 cartridge,cart_a10,143,Net-(RN11D-R4.2),J13-20; J16-20,/A10,input,release,ipc_qsf,pSltAdr[10],RN11 100 ohm series.
 cartridge,cart_clock_out,144,Net-(RN6B-R2.2),J13-42; J16-42,/CLOCK,output,0,ipc_qsf,pCpuClk,RN6 100 ohm series. U1-144 and U1-152 share one net before RN6; U1-152 must remain input.
 cartridge,cart_clock_return,152,Net-(RN6B-R2.2),J13-42; J16-42,/CLOCK,input,release,ipc_qsf,pSltClk,RN6 100 ohm series. U1-144 and U1-152 share one net before RN6; U1-152 must remain input.
-cartridge,cart_reset_n,153,Net-(RN6A-R1.2),J13-15; J16-15,/RESET,input,release,ipc_qsf,pSltRst_n,RN6 100 ohm series. Board reset supervisor U6-6 drives shared RESET; use as input only.
+cartridge,cart_reset_n,153,Net-(RN6A-R1.2),U6-6; J13-15; J16-15,/RESET,input,release,ipc_qsf,pSltRst_n,RN6 100 ohm series. Active-low board cold-reset input (board_reset_n). SW2 actuates U6 via DC. U6-6 drives /RESET shared with both cartridge slots.
 cartridge,cart_a7,156,Net-(RN6C-R3.2),J13-21; J16-21,/A7,input,release,ipc_qsf,pSltAdr[7],RN6 100 ohm series.
 cartridge,cart_a6,158,Net-(RN6D-R4.2),J13-22; J16-22,/A6,input,release,ipc_qsf,pSltAdr[6],RN6 100 ohm series.
 cartridge,cart_a12,159,Net-(RN1A-R1.2),J13-23; J16-23,/A12,input,release,ipc_qsf,pSltAdr[12],RN1 100 ohm series.

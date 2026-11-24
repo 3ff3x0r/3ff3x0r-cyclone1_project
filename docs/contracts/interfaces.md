@@ -93,20 +93,21 @@ guest decoder or boot bus adapter according to the boot overlay ownership.
   to model-defined contention. The boot adapter may wait for SDRAM.
 - C resolves ROM/RAM and physical bank on every access. Guest ROM writes and
   unmapped accesses terminate in C with profile-specific behavior. The loader
-  CPU adapter decodes permitted boot windows, and the loader/media arbiter
+  CPU adapter maps `4000–5FFF` to physical bank 5 at
+  `014000–015FFF` when `boot_overlay=1` (§6). The loader/media arbiter
   bounds every DMA against its assigned region before raising `req`.
   Fixed 16K maps bank 5 at CPU `4000–7FFF`. Fixed 48K maps banks
   5, 2 and 0 in ascending RAM windows. Paged profiles resolve each
   window before issuing the request, including the four +2A/+3 all-RAM
   layouts in Section 5 of the handoff.
-- For the fitted x16 organization, let `a` be the 22-bit fabric byte
-  address. Column is `a[9:1]`, row is `{1'b0,a[21:10]}`, and BA is 0.
-  Use A10 as the command's auto-precharge or all-bank bit where required.
-  Even addresses select DQ[7:0] with DQM[0] low and DQM[1] high for a byte
-  write. Odd addresses select DQ[15:8] with the masks reversed. B selects
-  the correct return lane on reads. Release DQ, deselect commands and mask
-  both lanes while held in reset. B keeps pad timing and the SDRAM phase
-  clock internal to the memory subsystem.
+- The fabric presents a 22-bit byte address `a`. On the x16 bus,
+  `a[0]=0` selects DQ[7:0] with DQM[0] low and DQM[1] high for a
+  byte write. `a[0]=1` selects DQ[15:8] with the masks reversed.
+  B uses the same lane selection on reads. B owns physical row, column
+  and bank-address mapping, including any bank interleaving, based on the
+  geometry verified on the fitted U5. Release DQ, deselect commands and
+  mask both lanes while held in reset. Pad timing and the SDRAM phase
+  clock are internal to B.
 
 ### Screen mirror and contention
 
@@ -120,7 +121,11 @@ Every committed write from either client to RAM bank 5 or 7 at offsets
 0–6911 updates its mirror on the same commit edge. Other writes leave the
 mirror alone. A simultaneous mirror read and same-byte commit returns
 the new byte with explicit forwarding. Both mirror ports are synchronous.
-The A/B initialization path writes these bytes before the first guest read.
+The loader clears bank 5 before its first screen use. In boot mode, C
+renders from its mirror using `screen_rd_bank7=0`, with the boot raster
+enabled while guest peripherals are held in reset. CPU writes at
+`4000–5AFF` update that mirror through the same commit path. Initialize
+the mirror bytes for both banks before the first guest read.
 ULA contention IDs are 0 none, 1 Sinclair 16/48, 2 128/+2,
 3 +2A/+3, 4 TK 50 Hz and 5 TK 60 Hz. Sinclair 16/48 contends with
 physical bank 5, 128/+2 with odd banks and +2A/+3 with banks 4–7.
@@ -182,7 +187,10 @@ display mode and are measured by D/H.
 | `key_matrix_n` | 40 | F → C/E | Held keyboard matrix in `clk_sys`. 0 is pressed and all ones is idle. |
 | `joy1`, `joy2` | 6 each | F → C/E | Active-high pressed state. Bits 0–5 are up, down, left, right, A, B. All zero is idle. |
 | `recovery_key` | 1 | F → A | Held physical PS/2 Set 2 F12, independent of guest key mapping. |
+| `soft_reset_key` | 1 | F → A | Held physical PS/2 Set 2 F11 for a soft guest reset. |
 | `ear_bit` | 1 | F → C | Normalized FE bit 6 after source selection and profile-specific idle. |
+| `tap_play_toggle`, `tap_rewind` | 1 each | F → G | One-cycle pulses on fresh F9 and F10 presses respectively. |
+| `tap_playing` | 1 | G → F | High while playback runs. |
 | `tap_ear_valid`, `tap_ear_bit` | 1 each | G → F | While valid, TAP supplies the EAR level. The level is held between pulse transitions. |
 | `mic_bit`, `beeper_bit` | 1 each | C → F | Held FE output bits 3 and 4 respectively. Reset to 0. |
 | `ay_req`, `ay_op`, `ay_wdata` | 1, 2, 8 | C → F | One decoded AY bus pulse. Operation 0 = register select, 1 = data write, 2 = selected-register read, 3 reserved. |
@@ -201,6 +209,10 @@ to 1/2/3/4/5. Mapping 1 keeps P2 on 1/2/3/4/5 and maps P1 Kempston bits
 0–4 to right/left/down/up/A. C ORs positive keyboard and joystick press
 sources before active-low FE encoding. A release in one source leaves
 other held sources active.
+
+F9–F12 are reserved host controls and stay out of the Spectrum matrix.
+F suppresses typematic repeats. For TAP it emits a pulse on the first
+make after release. For reset it reports the held levels to A (§6).
 
 C owns profile-specific AY and FE address decoding. F owns the AY-3-8912
 registers, samples and audio mixing. F chooses TAP EAR while valid, otherwise
@@ -246,13 +258,16 @@ state and report failure.
 |---|---:|---|---|
 | `img_mounted`, `img_length`, `img_readonly` | 1, 32, 1 | E → G | Active disk mount descriptor. Length is in bytes. Reset is unmounted, length 0, read-only. |
 | `tap_mounted`, `tap_base`, `tap_length` | 1, 22, 32 | E → G | Staged TAP span inside the media cache. Mount validated before guest ownership. |
+| `tap_mount_update` | 1 | E → G | One-cycle descriptor update, including remounts with the same base and length. Sample all three descriptor fields on this edge. |
 | `tap_rd_req`, `tap_rd_accept`, `tap_rd_offset`, `tap_rd_valid`, `tap_rd_data` | 1, 1, 32, 1, 8 | G → E, E → G, G → E, E → G, E → G | File-relative read-only TAP adapter with the memory boundary's acceptance and response rules. G issues offsets below length, and E grants acceptance only for a valid mounted range. E maps accepted requests to the loader/media RAM arbiter. |
 | `media_quiesce` | 1 | A → E/G | Stop initiating new transactions and retire work already accepted. |
 | `media_idle` | 1 | E/G → A | Combined idle indication. No SD, image or TAP request or response remains outstanding. |
 
 E may publish mount descriptor changes only while the affected client is
 quiescent and requests are gated. A holds guest execution during this
-transition. Guest reset preserves mount descriptors and dirty state.
+transition. G captures TAP descriptor updates in the fabric reset domain
+so a publish edge can arrive while `guest_reset_n` is low. Guest reset
+preserves mount descriptors and dirty state.
 Reject an image block if its full 512-byte span crosses file length.
 Check the span before shifting or narrowing, even when the file fits in
 cache. A live image backend maps the validated file offset through the
@@ -263,6 +278,18 @@ data until flush succeeds or the user explicitly discards it. TAP is
 byte-addressed and can play a file with a partial last sector. G prefetches
 from staging to keep pulse timing independent of filesystem traffic.
 
+G starts paused at offset zero on mount or guest reset. During guest
+operation, `tap_play_toggle` starts or resumes a mounted TAP, or pauses
+it and holds the byte position and pulse phase. `tap_rewind` discards
+prefetched data and returns to offset zero, paused. Reset and mount
+updates take priority over rewind, and rewind takes priority over toggle.
+Ignore transport pulses while unmounted, quiescing, or in the boot
+overlay. Retire any accepted read before reusing its request slot and
+discard stale responses after a rewind. At EOF playback stops until
+rewound. While paused, at EOF, or during startup prefetch, G deasserts
+`tap_ear_valid` and F supplies the profile's idle EAR level. Start the
+guest's `LOAD ""` before pressing F9.
+
 ## 6. Boot and diagnostics
 
 | Ports | Width | Direction | Meaning |
@@ -270,10 +297,11 @@ from staging to keep pulse timing independent of filesystem traffic.
 | `clocks_ready`, `mem_ready`, `mem_idle` | 1 each | D/A, B, B → A/E | Qualified guest clock enables, initialized SDRAM, and transaction drain status. |
 | `boot_overlay`, `sd_owner_boot` | 1 each | A → C/E/G | 1 selects loader address decode and grants E's boot path exclusive card ownership respectively. Both reset high. |
 | `cpu_reset_n`, `guest_reset_n` | 1 each | A → C, C/F/G | CPU reset and guest peripheral reset. Both assert low, with synchronous release. |
-| `guest_reset_req`, `return_to_boot_req` | 1 each | reset service → A | One pulse. Guest reset restarts current selection. Return quiesces guest and enters loader. Return has priority over guest reset. |
-| `recovery_key`, `boot_recovery` | 1 each | F → A, A → E | Held F12 and latched loader recovery selection. |
+| `board_reset_n` | 1 | U1-153 → A | Active-low cold-reset input driven by U6-6. SW2 actuates U6. |
+| `soft_reset_key`, `recovery_key` | 1 each | F → A | Held F11 and F12 respectively. A detects rising edges during guest operation. |
+| `boot_recovery` | 1 | A → E | Latched loader recovery selection. |
 | `boot_commit_valid`, `boot_commit_ready` | 1 each | E → A, A → E | One-shot commit command, with pending descriptor from §1. |
-| `boot_stage_ok`, `boot_ram_init_ok` | 1 each | E → A | Sampled with commit acceptance. Both are required for success. Qualify validated exact ROM lengths, slot order and CRC, and completed profile RAM initialization. |
+| `boot_stage_ok`, `boot_ram_init_ok` | 1 each | E → A | Sampled with commit acceptance. Both are required for success. Qualify validated exact ROM lengths, slot order and CRC, and completed RAM initialization including physical bank 5. |
 | `boot_publish` | 1 | A → E | One-cycle enable to publish the pending mount descriptors on the same edge as the configuration latch. |
 | `boot_commit_done`, `boot_error` | 1, 8 | A → E | Completion pulse and status. A retains the error code until a new attempt or reset so the loader can render it. |
 | `loader_diag_active`, `loader_diag_code` | 1, 8 | E → A/D | Held diagnostic status and visible code for firmware failures, including when no commit was attempted. |
@@ -283,24 +311,39 @@ from staging to keep pulse timing independent of filesystem traffic.
 
 The boot bridge holds `boot_bus_req` and its payload through completion.
 It issues one request per CPU access and may stall boot CPU execution
-while waiting. The initial boot map puts a 4 KiB on-chip ROM at
-`0000–0FFF` and loader RAM at `4000–FFFF`, starting at fabric
-`040000`. Boot ROM writes are ignored, and unmapped memory reads
-return `FF`. Loader I/O registers and any banked staging access through
-them are internal to E. The boot adapter passes only bounded fabric
-accesses to B. No guest bus cycle reaches these loader registers.
+while waiting. While `boot_overlay=1`, decode these inclusive byte ranges.
+
+| CPU range | Boot mapping |
+|---|---|
+| `0000–0FFF` | 4 KiB on-chip boot ROM. Ignore writes. |
+| `4000–5FFF` | First 8 KiB of physical RAM bank 5 at fabric `014000–015FFF`. `4000–5AFF` is the mirrored screen. |
+| `6000–FFFF` | Loader RAM at fabric `040000–049FFF`. |
+
+Unmapped memory reads return `FF`. If FAT16/32 and the menu exceed
+4 KiB, the boot ROM may act as stage 1, load a stage-2 menu binary from SD
+into loader RAM, and transfer execution there with the overlay still
+active. Loader I/O registers and any banked staging access through them
+are internal to E. The boot adapter passes only bounded fabric accesses
+to B. No guest bus cycle reaches these loader registers.
+
+E clears and initializes physical bank 5 before setting
+`boot_ram_init_ok`. The CPU screen window covers its first 8 KiB.
+Use the loader memory port to initialize the rest of bank 5
+(`016000–017FFF`) and wait for all initialization writes to commit
+before asserting the flag.
 
 On fabric reset A selects the boot overlay and holds guest peripherals in
 reset. A releases the CPU into on-chip boot ROM at address zero once
 clocks are ready. The boot CPU gates SDRAM activity on `mem_ready`.
-The loader offers a recovery window before automatic selection. F12 is
-sampled as a held level during that window after the PS/2 decoder sees the
-make code. A fresh F12 press while the guest runs requests return
-to the loader. A held key must be released before it can request
-another return.
-A latched recovery choice inhibits automatic commit until explicit
-selection. Power-on recovery remains in the loader if the key's make code
-arrives during the window. SW2 board reset restarts the boot path.
+The loader offers a recovery window before automatic selection. A samples
+F12 as a held level during that window after F sees the make code. A
+latched recovery choice inhibits automatic commit until explicit
+selection. While the guest runs, A edge-detects the held key signals and
+sequences soft guest reset on F11 or return to the loader on F12. Return
+takes priority if both edges arrive together. A key held across an
+ownership transition must be released before it can trigger another
+action. SW2 asserts `board_reset_n` via U6, so A asserts fabric reset
+asynchronously and restarts the boot path on qualified release.
 
 E drains staging and initialization writes before commit and keeps staging
 and the descriptor stable until completion. A accepts a request once
@@ -407,10 +450,11 @@ apply after configuration. Bench and Quartus evidence are open.
   outputs idle high. DQ/address/reserved and cartridge-driven pins
   are released. U1-144 (`pCpuClk`) and U1-152 (`pSltClk`) are
   tied on the FPGA side of RN6. Hold 144 low and 152 as an input.
-  U1-153 receives the U6-supervised `/RESET` shared with both
-  ports. `/MERQ` is the PCB spelling of the active-low memory
-  request. Connector power rails remain live when the board supplies
-  them. Idle outputs apply after configuration.
+  U1-153 is the board's active-low cold-reset input. It receives
+  `/RESET` from U6-6 through RN6, shared with both ports. SW2
+  actuates U6 via its DC input. `/MERQ` is the PCB spelling of the
+  active-low memory request. Connector power rails remain live when the
+  board supplies them. Idle outputs apply after configuration.
 - **ESP naming.** The QSF's `pUsbP1` and `pUsbN1` are ESP UART
   paths, on J2-2 and J2-7. Both pads are released. The QSF also assigns
   `pUsbN2/pUsbP2` to U1-238/239, which have unconnected PCB pads
