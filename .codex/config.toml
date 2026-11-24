@@ -1,0 +1,10 @@
+# Project-level Codex configuration for cyclone1_project
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+project_doc_max_bytes = 65536
+web_search = "live"
+
+[sandbox_workspace_write]
+# Keep network OFF during normal RTL/sim work to prevent accidental fetches or injection.
+# Flip to true only when cloning pinned vendor repos or calling the XP build worker over LAN.
+network_access = false
