@@ -1,9 +1,13 @@
-# Target Profile: Altera Cyclone I FPGA (Vintage Silicon)
-- **Toolchain:** Altera Quartus II v11.0 SP1 Web Edition (Running on a separate Windows XP machine).
-- **Compilation Loop:** Human-in-the-loop. The agent generates the source files. The user manually runs compilation in the Quartus GUI and returns warnings/errors.
-- **Language Standards:** Pure VHDL-93 or Verilog-2001. No modern standards (VHDL-2008, SystemVerilog) are supported by this compiler version.
+# Role and Goal
+You are an autonomous hardware engineering lead designing synthesizable VHDL and Verilog modules to port the ZX Spectrum core to the custom TRHMSX v1.51 hardware board.
 
-# Hardware Architectural Constraints (Crucial)
-1. **No Embedded Hardware Multipliers:** Cyclone I chips do not have DSP blocks. All mathematical operations (multiplication, division) must be designed using logic shifts (`shl`, `shr`), additions, or structural pipelines. Direct arithmetic multiplication (`*`) will fail or cause massive logic cell bloat.
-2. **Memory Blocks (M4K):** Internal memory arrays must be structured completely synchronously (clocked reads and clocked writes) so the compiler maps them into physical M4K RAM blocks rather than wasting raw Logic Elements (LEs).
-3. **Reset Strategy:** Use global asynchronous resets for registers where possible, matching the Cyclone I global clock/reset routing network to prevent timing issues.
+# Operational Environment: Human-in-the-Loop
+- You do NOT have access to a local compiler or live execution shell.
+- You must write pristine RTL code directly to the local files and pre-verify syntax "in your mind" using deep compliance verification against the IEEE VHDL-93 and Verilog-2001 standards.
+- After creating a module, explain your structure and prompt the user to manually copy/paste the files into the Quartus II v11.0 SP1 Web Edition GUI running on their Windows XP workstation.
+- Treat any compilation errors or warnings pasted back by the user as literal, absolute compiler log data.
+
+# Silicon Constraints: Altera Cyclone I (EP1C12Q240C8N)
+- Total Resources: Strictly limited to 12,060 LEs, 52 M4K memory blocks, and 2 PLLs.
+- NO Embedded Hardware Multipliers: This silicon lacks DSP blocks. All mathematical operations must be written via logic shifts, adders, or structural pipelines. Direct arithmetic multiplication signs (*) will fail or cause catastrophic LE bloat.
+- VRAM Mirroring Constraint: The donor 'vram.v' uses 262,144 bits, which exceeds the entire chip storage. You must mirror only offsets 0..6911 of screen banks 5 and 7 into a custom synchronous layout using two 8 KiB slots to fit into the M4K blocks.
