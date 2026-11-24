@@ -1,0 +1,202 @@
+interface,signal,fpga_pin,fpga_net,board_endpoint,board_net,direction,idle_or_safe,verification_status,ocm_qsf_signal,notes
+clock,clk_21m,28,/CLK21M,U4-6,Net-(U4-Y1),input,oscillator,ipc_qsf,pClk21m,Y1 21.47727 MHz through U4 and R9 100 ohm. Both pads see the same oscillator.
+clock,ext_clk,29,/EXTCLK,U4-6,Net-(U4-Y1),input,release,ipc_qsf,pExtClk,Y1 21.47727 MHz through U4 and R8 100 ohm. Both pads see the same oscillator.
+sdram,sdram_a[0],203,/MA0,U5-23,/MA0,output,0,ipc_qsf,pMemAdr[0],
+sdram,sdram_a[1],206,/MA1,U5-24,/MA1,output,0,ipc_qsf,pMemAdr[1],
+sdram,sdram_a[2],207,/MA2,U5-25,/MA2,output,0,ipc_qsf,pMemAdr[2],
+sdram,sdram_a[3],208,/MA3,U5-26,/MA3,output,0,ipc_qsf,pMemAdr[3],
+sdram,sdram_a[4],235,/MA4,U5-29,/MA4,output,0,ipc_qsf,pMemAdr[4],
+sdram,sdram_a[5],234,/MA5,U5-30,/MA5,output,0,ipc_qsf,pMemAdr[5],
+sdram,sdram_a[6],233,/MA6,U5-31,/MA6,output,0,ipc_qsf,pMemAdr[6],
+sdram,sdram_a[7],228,/MA7,U5-32,/MA7,output,0,ipc_qsf,pMemAdr[7],
+sdram,sdram_a[8],227,/MA8,U5-33,/MA8,output,0,ipc_qsf,pMemAdr[8],
+sdram,sdram_a[9],226,/MA9,U5-34,/MA9,output,0,ipc_qsf,pMemAdr[9],
+sdram,sdram_a[10],202,/MA10,U5-22,/MA10,output,0,ipc_qsf,pMemAdr[10],A10 also selects precharge/all-bank behavior per command.
+sdram,sdram_a[11],225,/MA11,U5-35,/MA11,output,0,ipc_qsf,pMemAdr[11],
+sdram,sdram_a[12],224,/MA12,U5-36,/MA12,output,0,ipc_qsf,pMemAdr[12],
+sdram,sdram_dq[0],181,/MD0,U5-2,/MD0,inout,release,ipc_qsf,pMemDat[0],
+sdram,sdram_dq[1],182,/MD1,U5-4,/MD1,inout,release,ipc_qsf,pMemDat[1],
+sdram,sdram_dq[2],183,/MD2,U5-5,/MD2,inout,release,ipc_qsf,pMemDat[2],
+sdram,sdram_dq[3],184,/MD3,U5-7,/MD3,inout,release,ipc_qsf,pMemDat[3],
+sdram,sdram_dq[4],185,/MD4,U5-8,/MD4,inout,release,ipc_qsf,pMemDat[4],
+sdram,sdram_dq[5],186,/MD5,U5-10,/MD5,inout,release,ipc_qsf,pMemDat[5],
+sdram,sdram_dq[6],187,/MD6,U5-11,/MD6,inout,release,ipc_qsf,pMemDat[6],
+sdram,sdram_dq[7],188,/MD7,U5-13,/MD7,inout,release,ipc_qsf,pMemDat[7],
+sdram,sdram_dq[8],222,/MD8,U5-42,/MD8,inout,release,ipc_qsf,pMemDat[8],
+sdram,sdram_dq[9],219,/MD9,U5-44,/MD9,inout,release,ipc_qsf,pMemDat[9],
+sdram,sdram_dq[10],218,/MD10,U5-45,/MD10,inout,release,ipc_qsf,pMemDat[10],
+sdram,sdram_dq[11],217,/MD11,U5-47,/MD11,inout,release,ipc_qsf,pMemDat[11],
+sdram,sdram_dq[12],216,/MD12,U5-48,/MD12,inout,release,ipc_qsf,pMemDat[12],
+sdram,sdram_dq[13],215,/MD13,U5-50,/MD13,inout,release,ipc_qsf,pMemDat[13],
+sdram,sdram_dq[14],214,/MD14,U5-51,/MD14,inout,release,ipc_qsf,pMemDat[14],
+sdram,sdram_dq[15],213,/MD15,U5-53,/MD15,inout,release,ipc_qsf,pMemDat[15],
+sdram,sdram_ba[0],200,/MBA0,U5-20,/MBA0,output,0,ipc_qsf,pMemBa0,
+sdram,sdram_ba[1],201,/MBA1,U5-21,/MBA1,output,0,ipc_qsf,pMemBa1,
+sdram,sdram_clk,38,Net-(U1A-IO_24),U5-38,/MCLK,output,controller clock,ipc_qsf,pMemClk,Series R10 22 ohm. Clock must run during JEDEC initialization.
+sdram,sdram_cke,39,/MCKE,U5-37,/MCKE,output,0 before init,ipc_qsf,pMemCke,Controller controls CKE through initialization and operation.
+sdram,sdram_dqm[0],193,/MLDQ,U5-15,/MLDQ,output,1,ipc_qsf,pMemLdq,DQ[7:0]; mask high.
+sdram,sdram_dqm[1],223,/MUDQ,U5-39,/MUDQ,output,1,ipc_qsf,pMemUdq,DQ[15:8]; mask high.
+sdram,sdram_cs_n,197,/MCS,U5-19,/MCS,output,1,ipc_qsf,pMemCs_n,Active low.
+sdram,sdram_ras_n,196,/MRAS,U5-18,/MRAS,output,1,ipc_qsf,pMemRas_n,Active low.
+sdram,sdram_cas_n,195,/MCAS,U5-17,/MCAS,output,1,ipc_qsf,pMemCas_n,Active low.
+sdram,sdram_we_n,194,/MWE,U5-16,/MWE,output,1,ipc_qsf,pMemWe_n,Active low.
+sd,sd_dat1,61,Net-(RN21A-R1.2),J4-8,/SD_D1,input,release,ipc_qsf,pSd_Dt[1],RN21 100 ohm series. Unused in SPI.
+sd,sd_miso,62,Net-(RN21B-R2.2),J4-7,/SD_D0,input,release,ipc_qsf,pSd_Dt[0],RN21 100 ohm series. DAT0.
+sd,sd_sck,63,Net-(RN21C-R3.2),J4-5,/SD_CK,output,0,ipc_qsf,pSd_Ck,RN21 100 ohm series. R2 pulls connector side to +3.3 V when undriven.
+sd,sd_mosi,64,Net-(RN21D-R4.2),J4-3,/SD_CM,output,1,ipc_qsf,pSd_Cm,RN21 100 ohm series. CMD. R1 pulls connector side to +3.3 V.
+sd,sd_cs_n,65,Net-(RN22A-R1.2),J4-2,/SD_D3,output,1,ipc_qsf,pSd_Dt[3],RN22 100 ohm series. DAT3. Active low. Production IPC shows no external DAT3 pull-up on motherboard.
+sd,sd_dat2,66,Net-(RN22B-R2.2),J4-1,/SD_D2,input,release,ipc_qsf,pSd_Dt[2],RN22 100 ohm series. Unused in SPI.
+sd,sd_detect,,,J4-9,unconnected-(J4-DET-Pad9),nc,unconnected,ipc,,No hardware detect input. Use timeout and explicit remount.
+sd,supply,,,J4-4,+3.3V,power,board rail,ipc,,
+sd,ground,,,J4-6,GND,power,board rail,ipc,,
+ps2,ps2_data,67,Net-(RN22C-R3.2),J7-1; U7-2,/KDAT,input,release,ipc_qsf_electrical_open,pPs2Dat,RN22 100 ohm series. R13 2.2k to +5 V. Shared with CH559T. See electrical hold in contracts.
+ps2,ps2_clk,68,Net-(RN22D-R4.2),J7-5; U7-5,/KCLK,input,release,ipc_qsf_electrical_open,pPs2Clk,RN22 100 ohm series. R14 2.2k to +5 V. Shared with CH559T. See electrical hold in contracts.
+ps2,nc,,,J7-2,unconnected-(J7-Pad2),nc,unconnected,ipc,,
+ps2,ground,,,J7-3,GND,power,board rail,ipc,,
+ps2,supply,,,J7-4,+5V,power,board rail,ipc,,
+ps2,nc,,,J7-6,unconnected-(J7-Pad6),nc,unconnected,ipc,,
+vga,ddc_sda,73,Net-(RN23A-R1.2),J14-15,/SDAT,input,release,ipc_qsf,pVideoDat,RN23 100 ohm series. DDC undriven; external voltage interface unqualified.
+vga,vga_vs_n,74,Net-(RN23B-R2.2),J14-14,/VSYNC,output,1,ipc_qsf,pVideoVS_n,RN23 100 ohm series. Separate sync.
+vga,vga_hs_n,75,Net-(RN23C-R3.2),J14-13,/HSYNC,output,1,ipc_qsf,pVideoHS_n,RN23 100 ohm series. Separate sync.
+vga,ddc_scl,76,Net-(RN23D-R4.2),J14-12,/SCLK,input,release,ipc_qsf,pVideoClk,RN23 100 ohm series. DDC undriven; external voltage interface unqualified.
+vga,vga_r[0],95,/VR0,J14-1,/VR_SC,output,0,ipc_qsf,pDac_VR[0],Resistor DAC through C32. Bit 0 is LSB. Blank to black.
+vga,vga_r[1],98,/VR1,J14-1,/VR_SC,output,0,ipc_qsf,pDac_VR[1],Resistor DAC through C32. Bit 0 is LSB. Blank to black.
+vga,vga_r[2],99,/VR2,J14-1,/VR_SC,output,0,ipc_qsf,pDac_VR[2],Resistor DAC through C32. Bit 0 is LSB. Blank to black.
+vga,vga_r[3],100,/VR3,J14-1,/VR_SC,output,0,ipc_qsf,pDac_VR[3],Resistor DAC through C32. Bit 0 is LSB. Blank to black.
+vga,vga_r[4],101,/VR4,J14-1,/VR_SC,output,0,ipc_qsf,pDac_VR[4],Resistor DAC through C32. Bit 0 is LSB. Blank to black.
+vga,vga_r[5],104,/VR5,J14-1,/VR_SC,output,0,ipc_qsf,pDac_VR[5],Resistor DAC through C32. Bit 0 is LSB. Blank to black.
+vga,vga_g[0],85,/VG0,J14-2,/VG_SY,output,0,ipc_qsf,pDac_VG[0],Resistor DAC through C31. Bit 0 is LSB. Blank to black.
+vga,vga_g[1],86,/VG1,J14-2,/VG_SY,output,0,ipc_qsf,pDac_VG[1],Resistor DAC through C31. Bit 0 is LSB. Blank to black.
+vga,vga_g[2],87,/VG2,J14-2,/VG_SY,output,0,ipc_qsf,pDac_VG[2],Resistor DAC through C31. Bit 0 is LSB. Blank to black.
+vga,vga_g[3],88,/VG3,J14-2,/VG_SY,output,0,ipc_qsf,pDac_VG[3],Resistor DAC through C31. Bit 0 is LSB. Blank to black.
+vga,vga_g[4],93,/VG4,J14-2,/VG_SY,output,0,ipc_qsf,pDac_VG[4],Resistor DAC through C31. Bit 0 is LSB. Blank to black.
+vga,vga_g[5],94,/VG5,J14-2,/VG_SY,output,0,ipc_qsf,pDac_VG[5],Resistor DAC through C31. Bit 0 is LSB. Blank to black.
+vga,vga_b[0],77,/VB0,J14-3,/VB_CV,output,0,ipc_qsf,pDac_VB[0],Resistor DAC through C30. Bit 0 is LSB. Blank to black.
+vga,vga_b[1],78,/VB1,J14-3,/VB_CV,output,0,ipc_qsf,pDac_VB[1],Resistor DAC through C30. Bit 0 is LSB. Blank to black.
+vga,vga_b[2],79,/VB2,J14-3,/VB_CV,output,0,ipc_qsf,pDac_VB[2],Resistor DAC through C30. Bit 0 is LSB. Blank to black.
+vga,vga_b[3],82,/VB3,J14-3,/VB_CV,output,0,ipc_qsf,pDac_VB[3],Resistor DAC through C30. Bit 0 is LSB. Blank to black.
+vga,vga_b[4],83,/VB4,J14-3,/VB_CV,output,0,ipc_qsf,pDac_VB[4],Resistor DAC through C30. Bit 0 is LSB. Blank to black.
+vga,vga_b[5],84,/VB5,J14-3,/VB_CV,output,0,ipc_qsf,pDac_VB[5],Resistor DAC through C30. Bit 0 is LSB. Blank to black.
+audio,audio_l[0],105,/SL0,J11-T,/SOUND_L,output,0,ipc_qsf,pDac_SL[0],Resistor DAC through C29. Bit 0 is LSB. Mute using a constant code.
+audio,audio_l[1],106,/SL1,J11-T,/SOUND_L,output,0,ipc_qsf,pDac_SL[1],Resistor DAC through C29. Bit 0 is LSB. Mute using a constant code.
+audio,audio_l[2],107,/SL2,J11-T,/SOUND_L,output,0,ipc_qsf,pDac_SL[2],Resistor DAC through C29. Bit 0 is LSB. Mute using a constant code.
+audio,audio_l[3],108,/SL3,J11-T,/SOUND_L,output,0,ipc_qsf,pDac_SL[3],Resistor DAC through C29. Bit 0 is LSB. Mute using a constant code.
+audio,audio_l[4],113,/SL4,J11-T,/SOUND_L,output,0,ipc_qsf,pDac_SL[4],Resistor DAC through C29. Bit 0 is LSB. Mute using a constant code.
+audio,audio_l[5],114,/SL5,J11-T,/SOUND_L,output,0,ipc_qsf,pDac_SL[5],Resistor DAC through C29. Bit 0 is LSB. Mute using a constant code.
+audio,audio_r[0],115,/SR0,J11-S,/SOUND_R,output,0,ipc_qsf,pDac_SR[0],Resistor DAC through C28. Bit 0 is LSB. Mute using a constant code.
+audio,audio_r[1],116,/SR1,J11-S,/SOUND_R,output,0,ipc_qsf,pDac_SR[1],Resistor DAC through C28. Bit 0 is LSB. Mute using a constant code.
+audio,audio_r[2],117,/SR2,J11-S,/SOUND_R,output,0,ipc_qsf,pDac_SR[2],Resistor DAC through C28. Bit 0 is LSB. Mute using a constant code.
+audio,audio_r[3],118,/SR3,J11-S,/SOUND_R,output,0,ipc_qsf,pDac_SR[3],Resistor DAC through C28. Bit 0 is LSB. Mute using a constant code.
+audio,audio_r[4],119,/SR4,J11-S,/SOUND_R,output,0,ipc_qsf,pDac_SR[4],Resistor DAC through C28. Bit 0 is LSB. Mute using a constant code.
+audio,audio_r[5],120,/SR5,J11-S,/SOUND_R,output,0,ipc_qsf,pDac_SR[5],Resistor DAC through C28. Bit 0 is LSB. Mute using a constant code.
+vga,nc,,,J14-4,unconnected-(J14-Pad4),nc,unconnected,ipc,,
+vga,ground,,,J14-5,GND,power,board rail,ipc,,
+vga,ground,,,J14-6,GND,power,board rail,ipc,,
+vga,ground,,,J14-7,GND,power,board rail,ipc,,
+vga,ground,,,J14-8,GND,power,board rail,ipc,,
+vga,supply,,,J14-9,+5V,power,board rail,ipc,,
+vga,ground,,,J14-10,GND,power,board rail,ipc,,
+vga,nc,,,J14-11,unconnected-(J14-P111-Pad11),nc,unconnected,ipc,,
+audio,ground,,,J11-G,GND,power,board ground,ipc,,J11 T is tip (left); S is the second signal contact (right). No EAR input.
+joy1,joy1_up,1,Net-(RN13A-R1.2),J15-1,/IO0,input,release,ipc_qsf,pJoyA[0],RN13 100 ohm series; RN44 10k pull-up to +3.3 V. Active-low switch.
+joy1,joy1_down,3,Net-(RN13C-R3.2),J15-2,/IO2,input,release,ipc_qsf,pJoyA[1],RN13 100 ohm series; RN44 10k pull-up to +3.3 V. Active-low switch.
+joy1,joy1_left,5,Net-(RN14A-R1.2),J15-3,/IO4,input,release,ipc_qsf,pJoyA[2],RN14 100 ohm series; RN35 10k pull-up to +3.3 V. Active-low switch.
+joy1,joy1_right,7,Net-(RN14C-R3.2),J15-4,/IO6,input,release,ipc_qsf,pJoyA[3],RN14 100 ohm series; RN35 10k pull-up to +3.3 V. Active-low switch.
+joy1,joy1_a,2,Net-(RN13B-R2.2),J15-6,/IO1,input,release,ipc_qsf,pJoyA[4],RN13 100 ohm series; RN44 10k pull-up to +3.3 V. Active-low switch.
+joy1,joy1_b,4,Net-(RN13D-R4.2),J15-7,/IO3,input,release,ipc_qsf,pJoyA[5],RN13 100 ohm series; RN44 10k pull-up to +3.3 V. Active-low switch.
+joy1,joy1_strobe,6,Net-(RN14B-R2.2),J15-8,/IO5,output,0,ipc_qsf,pStrA,RN14 100 ohm series; RN35 10k pull-up to +3.3 V. Low common return for passive MSX stick.
+joy1,supply,,,J15-5,+5V,power,board rail,ipc,,
+joy1,ground,,,J15-9,GND,power,board rail,ipc,,
+joy2,joy2_up,8,Net-(RN14D-R4.2),J10-1,/IO7,input,release,ipc_qsf,pJoyB[0],RN14 100 ohm series; RN26 10k pull-up to +3.3 V. Active-low switch.
+joy2,joy2_down,12,Net-(RN15B-R2.2),J10-2,/IO9,input,release,ipc_qsf,pJoyB[1],RN15 100 ohm series; RN26 10k pull-up to +3.3 V. Active-low switch.
+joy2,joy2_left,14,Net-(RN15D-R4.2),J10-3,/IO11,input,release,ipc_qsf,pJoyB[2],RN15 100 ohm series; RN25 10k pull-up to +3.3 V. Active-low switch.
+joy2,joy2_right,16,Net-(RN16B-R2.2),J10-4,/IO13,input,release,ipc_qsf,pJoyB[3],RN16 100 ohm series; RN25 10k pull-up to +3.3 V. Active-low switch.
+joy2,joy2_a,11,Net-(RN15A-R1.2),J10-6,/IO8,input,release,ipc_qsf,pJoyB[4],RN15 100 ohm series; RN26 10k pull-up to +3.3 V. Active-low switch.
+joy2,joy2_b,13,Net-(RN15C-R3.2),J10-7,/IO10,input,release,ipc_qsf,pJoyB[5],RN15 100 ohm series; RN26 10k pull-up to +3.3 V. Active-low switch.
+joy2,joy2_strobe,15,Net-(RN16A-R1.2),J10-8,/IO12,output,0,ipc_qsf,pStrB,RN16 100 ohm series; RN25 10k pull-up to +3.3 V. Low common return for passive MSX stick.
+joy2,supply,,,J10-5,+5V,power,board rail,ipc,,
+joy2,ground,,,J10-9,GND,power,board rail,ipc,,
+active_serial,as_dclk,36,/AS_CK,J8-1; U8-6,/AS_CK,config_output,configuration only,ipc_device,,EPCS DCLK.
+active_serial,conf_done,145,/C_DONE,J8-3,/C_DONE,config_open_drain,configuration only,ipc_device,,Pulled high by RN12.
+active_serial,nconfig,26,/C_CONF,J8-5,/C_CONF,config_input,configuration only,ipc_device,,Active-low. Pulled high by RN12.
+active_serial,nce,33,/C_CE,J8-6,/C_CE,config_input,configuration only,ipc_device,,Active-low. RN12 pulls to ground.
+active_serial,data0,25,/AS_DI,J8-7; U8-2,/AS_DI,config_input,configuration only,ipc_device,,EPCS DATA output to FPGA DATA0. Board /AS_DI names the FPGA-side direction.
+active_serial,ncso,24,/AS_CS,J8-8; U8-1,/AS_CS,config_output,configuration only,ipc_device,,Flash nCS.
+active_serial,asdo,37,/AS_DO,J8-9; U8-5,/AS_DO,config_output,configuration only,ipc_device,,FPGA ASDO to EPCS ASDI. Board /AS_DO names the FPGA-side direction.
+active_serial,ground,,,J8-2,GND,power,board rail,ipc,,
+active_serial,supply,,,J8-4,+3.3V,power,board rail,ipc,,
+active_serial,ground,,,J8-10,GND,power,board rail,ipc,,
+active_serial,nstatus,146,/C_STAT,RN12-6,/C_STAT,config_open_drain,configuration only,ipc_device,,Pulled high; absent from J8.
+jtag,tck,147,GND,,,config_input,dedicated JTAG,ipc_device,,No J8 connection.
+jtag,tms,148,+3.3V,,,config_input,dedicated JTAG,ipc_device,,No J8 connection.
+jtag,tdo,149,unconnected-(U1B-TDO-Pad149),,,config_output,dedicated JTAG,ipc_device,,No J8 connection.
+jtag,tdi,155,+3.3V,,,config_input,dedicated JTAG,ipc_device,,No J8 connection.
+cartridge,cart_sltsl2_n,121,Net-(RN7A-R1.2),J13-4,/SLTSL2,output,1,ipc_qsf,pSltSlts2_n,RN7 100 ohm series.
+cartridge,cart_cs1_n,122,Net-(RN7B-R2.2),J13-1; J16-1,/CS1,output,1,ipc_qsf,pSltCs1_n,RN7 100 ohm series.
+cartridge,cart_cs2_n,123,Net-(RN7C-R3.2),J13-2; J16-2,/CS2,output,1,ipc_qsf,pSltCs2_n,RN7 100 ohm series.
+cartridge,cart_cs12_n,124,Net-(RN7D-R4.2),J13-3; J16-3,/CS12,output,1,ipc_qsf,pSltCs12_n,RN7 100 ohm series.
+cartridge,cart_sltsl1_n,125,Net-(RN8A-R1.2),J16-4,/SLTSL1,output,1,ipc_qsf,pSltSltsl_n,RN8 100 ohm series.
+cartridge,cart_rsv5,126,Net-(RN8B-R2.2),J13-5; J16-5,/RSV5,input,release,ipc_qsf,pSltRsv5,RN8 100 ohm series.
+cartridge,cart_rfsh_n,127,Net-(RN8C-R3.2),J13-6; J16-6,/RFSH,output,1,ipc_qsf,pSltRfsh_n,RN8 100 ohm series.
+cartridge,cart_wait_n,128,Net-(RN8D-R4.2),J13-7; J16-7,/WAIT,input,release,ipc_qsf,pSltWait_n,RN8 100 ohm series.
+cartridge,cart_int_n,131,Net-(RN9A-R1.2),J13-8; J16-8,/INT,input,release,ipc_qsf,pSltInt_n,RN9 100 ohm series.
+cartridge,cart_m1_n,132,Net-(RN9B-R2.2),J13-9; J16-9,/M1,output,1,ipc_qsf,pSltM1_n,RN9 100 ohm series.
+cartridge,cart_bdir,133,Net-(RN9C-R3.2),J13-10; J16-10,/BDIR,input,release,ipc_qsf,pSltBdir_n,RN9 100 ohm series.
+cartridge,cart_iorq_n,134,Net-(RN9D-R4.2),J13-11; J16-11,/IORQ,output,1,ipc_qsf,pSltIorq_n,RN9 100 ohm series.
+cartridge,cart_merq_n,135,Net-(RN10A-R1.2),J13-12; J16-12,/MERQ,output,1,ipc_qsf,pSltMerq_n,RN10 100 ohm series.
+cartridge,cart_wr_n,136,Net-(RN10B-R2.2),J13-13; J16-13,/WR,output,1,ipc_qsf,pSltWr_n,RN10 100 ohm series.
+cartridge,cart_rd_n,137,Net-(RN10C-R3.2),J13-14; J16-14,/RD,output,1,ipc_qsf,pSltRd_n,RN10 100 ohm series.
+cartridge,cart_rsv16,138,Net-(RN10D-R4.2),J13-16; J16-16,/RSV16,input,release,ipc_qsf,pSltRsv16,RN10 100 ohm series.
+cartridge,cart_a9,139,Net-(RN11A-R1.2),J13-17; J16-17,/A9,input,release,ipc_qsf,pSltAdr[9],RN11 100 ohm series.
+cartridge,cart_a15,140,Net-(RN11B-R2.2),J13-18; J16-18,/A15,input,release,ipc_qsf,pSltAdr[15],RN11 100 ohm series.
+cartridge,cart_a11,141,Net-(RN11C-R3.2),J13-19; J16-19,/A11,input,release,ipc_qsf,pSltAdr[11],RN11 100 ohm series.
+cartridge,cart_a10,143,Net-(RN11D-R4.2),J13-20; J16-20,/A10,input,release,ipc_qsf,pSltAdr[10],RN11 100 ohm series.
+cartridge,cart_clock_out,144,Net-(RN6B-R2.2),J13-42; J16-42,/CLOCK,output,0,ipc_qsf,pCpuClk,RN6 100 ohm series. U1-144 and U1-152 share one net before RN6; U1-152 must remain input.
+cartridge,cart_clock_return,152,Net-(RN6B-R2.2),J13-42; J16-42,/CLOCK,input,release,ipc_qsf,pSltClk,RN6 100 ohm series. U1-144 and U1-152 share one net before RN6; U1-152 must remain input.
+cartridge,cart_reset_n,153,Net-(RN6A-R1.2),J13-15; J16-15,/RESET,input,release,ipc_qsf,pSltRst_n,RN6 100 ohm series. Board reset supervisor U6-6 drives shared RESET; use as input only.
+cartridge,cart_a7,156,Net-(RN6C-R3.2),J13-21; J16-21,/A7,input,release,ipc_qsf,pSltAdr[7],RN6 100 ohm series.
+cartridge,cart_a6,158,Net-(RN6D-R4.2),J13-22; J16-22,/A6,input,release,ipc_qsf,pSltAdr[6],RN6 100 ohm series.
+cartridge,cart_a12,159,Net-(RN1A-R1.2),J13-23; J16-23,/A12,input,release,ipc_qsf,pSltAdr[12],RN1 100 ohm series.
+cartridge,cart_a8,160,Net-(RN1B-R2.2),J13-24; J16-24,/A8,input,release,ipc_qsf,pSltAdr[8],RN1 100 ohm series.
+cartridge,cart_a14,161,Net-(RN1C-R3.2),J13-25; J16-25,/A14,input,release,ipc_qsf,pSltAdr[14],RN1 100 ohm series.
+cartridge,cart_a13,162,Net-(RN1D-R4.2),J13-26; J16-26,/A13,input,release,ipc_qsf,pSltAdr[13],RN1 100 ohm series.
+cartridge,cart_a1,163,Net-(RN2A-R1.2),J13-27; J16-27,/A1,input,release,ipc_qsf,pSltAdr[1],RN2 100 ohm series.
+cartridge,cart_a0,164,Net-(RN2B-R2.2),J13-28; J16-28,/A0,input,release,ipc_qsf,pSltAdr[0],RN2 100 ohm series.
+cartridge,cart_a3,165,Net-(RN2C-R3.2),J13-29; J16-29,/A3,input,release,ipc_qsf,pSltAdr[3],RN2 100 ohm series.
+cartridge,cart_a2,166,Net-(RN2D-R4.2),J13-30; J16-30,/A2,input,release,ipc_qsf,pSltAdr[2],RN2 100 ohm series.
+cartridge,cart_a5,167,Net-(RN3A-R1.2),J13-31; J16-31,/A5,input,release,ipc_qsf,pSltAdr[5],RN3 100 ohm series.
+cartridge,cart_a4,168,Net-(RN3B-R2.2),J13-32; J16-32,/A4,input,release,ipc_qsf,pSltAdr[4],RN3 100 ohm series.
+cartridge,cart_d1,169,Net-(RN3C-R3.2),J13-33; J16-33,/D1,input,release,ipc_qsf,pSltDat[1],RN3 100 ohm series.
+cartridge,cart_d0,170,Net-(RN3D-R4.2),J13-34; J16-34,/D0,input,release,ipc_qsf,pSltDat[0],RN3 100 ohm series.
+cartridge,cart_d3,173,Net-(RN4A-R1.2),J13-35; J16-35,/D3,input,release,ipc_qsf,pSltDat[3],RN4 100 ohm series.
+cartridge,cart_d2,174,Net-(RN4B-R2.2),J13-36; J16-36,/D2,input,release,ipc_qsf,pSltDat[2],RN4 100 ohm series.
+cartridge,cart_d5,175,Net-(RN4C-R3.2),J13-37; J16-37,/D5,input,release,ipc_qsf,pSltDat[5],RN4 100 ohm series.
+cartridge,cart_d4,176,Net-(RN4D-R4.2),J13-38; J16-38,/D4,input,release,ipc_qsf,pSltDat[4],RN4 100 ohm series.
+cartridge,cart_d7,177,Net-(RN5A-R1.2),J13-39; J16-39,/D7,input,release,ipc_qsf,pSltDat[7],RN5 100 ohm series.
+cartridge,cart_d6,178,Net-(RN5B-R2.2),J13-40; J16-40,/D6,input,release,ipc_qsf,pSltDat[6],RN5 100 ohm series.
+cartridge,cart_sw1,179,Net-(RN5C-R3.2),J13-44; J16-44,/SW1,input,release,ipc_qsf,pSltSw1,RN5 100 ohm series.
+cartridge,cart_sw2,180,Net-(RN5D-R4.2),J13-46; J16-46,/SW2,input,release,ipc_qsf,pSltSw2,RN5 100 ohm series.
+cartridge,ground,,,J13-41,GND,power,board rail,ipc,,
+cartridge,ground,,,J16-41,GND,power,board rail,ipc,,
+cartridge,ground,,,J13-43,GND,power,board rail,ipc,,
+cartridge,ground,,,J16-43,GND,power,board rail,ipc,,
+cartridge,supply,,,J13-45,+5V,power,board rail,ipc,,
+cartridge,supply,,,J16-45,+5V,power,board rail,ipc,,
+cartridge,supply,,,J13-47,+5V,power,board rail,ipc,,
+cartridge,supply,,,J16-47,+5V,power,board rail,ipc,,
+cartridge,supply,,,J13-48,+12V,power,board rail,ipc,,
+cartridge,supply,,,J16-48,+12V,power,board rail,ipc,,
+cartridge,nc,,,J13-49,Net-(J13-Pin_49),nc,unconnected,ipc,,
+cartridge,nc,,,J16-49,Net-(J16-Pin_49),nc,unconnected,ipc,,
+cartridge,supply,,,J13-50,-12V,power,board rail,ipc,,
+cartridge,supply,,,J16-50,-12V,power,board rail,ipc,,
+esp8266,esp_txd,237,/USBP1,J2-2,/USBP1,input,release,ipc_qsf,pUsbP1,TXD/RXD names use the ESP perspective. Leave both U1 pads undriven.
+esp8266,esp_rxd,236,/USBN1,J2-7,/USBN1,input,release,ipc_qsf,pUsbN1,TXD/RXD names use the ESP perspective. Leave both U1 pads undriven.
+esp8266,ground,,,J2-1,GND,power,board rail,ipc,,
+esp8266,nc,,,J2-3,unconnected-(J2-Pin_3-Pad3),nc,unconnected,ipc,,
+esp8266,supply,,,J2-4,+3.3V,power,board rail,ipc,,
+esp8266,nc,,,J2-5,unconnected-(J2-Pin_5-Pad5),nc,unconnected,ipc,,
+esp8266,jumper,,,J2-6,Net-(J17-Pin_2),passive,board jumper,ipc,,J17-2; J17-1 is +3.3 V. No FPGA control.
+esp8266,supply,,,J2-8,+3.3V,power,board rail,ipc,,
+esp8266,unused_238,238,unconnected-(U1C-IO_59-Pad238),,,input,release,ipc_qsf,pUsbN2,Donor name only. Published PCB pad is unconnected.
+esp8266,unused_239,239,unconnected-(U1C-IO_60-Pad239),,,input,release,ipc_qsf,pUsbP2,Donor name only. Published PCB pad is unconnected.
