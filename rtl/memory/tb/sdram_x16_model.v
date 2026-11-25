@@ -29,9 +29,13 @@ module sdram_x16_model #(
     localparam WORD_BITS = ROW_BITS + COL_BITS + BANK_BITS;
     localparam [3:0] NEED_PRE = 0, NEED_REF1 = 1, NEED_REF2 = 2,
                      NEED_MODE = 3, OPERATIONAL = 4;
+    // Micron 256Mb_sdr.pdf Rev. W, AC table and Figure 20. Use the
+    // loaded access maximum and the shorter no-load hold minimum.
     localparam TRCD_PS = 20000, TRP_PS = 20000, TRFC_PS = 66000,
                TRAS_PS = 44000, TRC_PS = 66000, TRRD_PS = 15000,
-               TWR_EXTRA_PS = 7500, TAC_PS = 5400, TOH_PS = 1800,
+               TWR_EXTRA_PS = 7500, TLZ_PS = 1000, TAC_PS = 5400,
+               TOH_PS = 1800, THZ_PS = 5400,
+               INPUT_SETUP_PS = 1500, INPUT_HOLD_PS = 800,
                TREFI_PS = 7812500, CAS = 3, TMRD = 3;
 
     reg [15:0] storage [0:(1 << WORD_BITS)-1];
@@ -47,6 +51,7 @@ module sdram_x16_model #(
     time power_started_at;
     time previous_clk_at;
     time clock_period;
+    time control_changed_at = 0;
     reg [3:0] phase;
     reg cke_seen;
     integer mode_cycle;
@@ -68,6 +73,37 @@ module sdram_x16_model #(
     assign column_word_addr = {{(25-WORD_BITS){1'b0}}, word_index};
     assign dq[7:0] = dq_drive[0] ? dq_data[7:0] : 8'bz;
     assign dq[15:8] = dq_drive[1] ? dq_data[15:8] : 8'bz;
+
+    always @(command or cke or a or ba or dqm) begin
+        if (rst_n && previous_clk_at != 0 && $time - previous_clk_at < INPUT_HOLD_PS)
+            $fatal(1, "SDRAM control/address hold violated at %0t", $time);
+        control_changed_at = $time;
+    end
+
+    genvar lane;
+    generate
+        for (lane = 0; lane < 2; lane = lane + 1) begin : write_timing
+            wire [7:0] lane_dq = dq[8*lane+:8];
+            time changed_at = 0;
+            time sampled_at;
+
+            always @(lane_dq) begin
+                if (rst_n && sampled_at != 0 && $time - sampled_at < INPUT_HOLD_PS)
+                    $fatal(1, "SDRAM WRITE DQ hold violated on lane %0d at %0t", lane, $time);
+                changed_at = $time;
+            end
+
+            always @(posedge clk or negedge rst_n) begin
+                if (!rst_n)
+                    sampled_at = 0;
+                else if (cke && command == WR && !dqm[lane]) begin
+                    if ($time - changed_at < INPUT_SETUP_PS)
+                        $fatal(1, "SDRAM WRITE DQ setup violated on lane %0d at %0t", lane, $time);
+                    sampled_at = $time;
+                end
+            end
+        end
+    endgenerate
 
     always @(posedge rst_n)
         power_started_at = $time;
@@ -101,16 +137,20 @@ module sdram_x16_model #(
             clock_period = $time - previous_clk_at;
             previous_clk_at = $time;
 
+            if ($time - control_changed_at < INPUT_SETUP_PS)
+                $fatal(1, "SDRAM control/address setup violated at %0t", $time);
             if (last_ref_at != 0 && ($time - last_ref_at > TREFI_PS))
                 $fatal(1, "Distributed refresh interval exceeded at %0t", $time);
 
             dqm_one_cycle_ago <= dqm;
             dqm_two_cycles_ago <= dqm_one_cycle_ago;
             if (cycle == read_output_cycle) begin
+                dq_drive <= #(TLZ_PS) ~dqm_two_cycles_ago;
+                dq_data <= #(TLZ_PS) 16'bx;
                 dq_data <= #(TAC_PS) read_word;
-                dq_drive <= #(TAC_PS) ~dqm_two_cycles_ago;
-            end else begin
-                dq_drive <= #(TOH_PS) 2'b00;
+            end else if (cycle == read_output_cycle + 1) begin
+                dq_data <= #(TOH_PS) 16'bx;
+                dq_drive <= #(THZ_PS) 2'b00;
             end
 
             if (!cke && (!cs_n || cke_seen))
@@ -197,7 +237,8 @@ module sdram_x16_model #(
                         if (command == RD) begin
                             if (cycle <= read_output_cycle)
                                 $fatal(1, "Model supports one burst in flight");
-                            read_output_cycle = cycle + CAS;
+                            // READ at T0 drives from T2 and is valid by T3 at CL3.
+                            read_output_cycle = cycle + CAS - 1;
                             read_word = storage[word_index];
                             read_at[chip_bank] = $time;
                         end else begin

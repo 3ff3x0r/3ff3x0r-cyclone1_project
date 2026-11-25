@@ -1,0 +1,220 @@
+set_global_assignment -name FAMILY Cyclone
+set_global_assignment -name DEVICE EP1C12Q240C8
+set_global_assignment -name TOP_LEVEL_ENTITY trhmsx_mem_fit_top
+set_global_assignment -name VERILOG_INPUT_VERSION VERILOG_2001
+set_global_assignment -name VERILOG_FILE trhmsx_mem_fit_top.v
+set_global_assignment -name VERILOG_FILE ../../rtl/memory/mem_subsystem.v
+set_global_assignment -name VERILOG_FILE ../../rtl/memory/mem_arbiter.v
+set_global_assignment -name VERILOG_FILE ../../rtl/memory/sdram_x16.v
+set_global_assignment -name VERILOG_FILE ../../rtl/memory/screen_mirror.v
+set_global_assignment -name SDC_FILE trhmsx_mem_fit.sdc
+set_global_assignment -name USE_TIMEQUEST_TIMING_ANALYZER ON
+set_global_assignment -name CYCLONE_CONFIGURATION_SCHEME "ACTIVE SERIAL"
+set_global_assignment -name USE_CONFIGURATION_DEVICE ON
+set_global_assignment -name CYCLONE_CONFIGURATION_DEVICE EPCS4
+set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
+set_global_assignment -name RESERVE_ALL_UNUSED_PINS "AS INPUT TRI-STATED"
+
+# User pad locations from pins.csv. Active Serial and JTAG use dedicated
+# assignments made by the device and configuration mode.
+
+# clock
+set_location_assignment PIN_28 -to clk_21m
+set_location_assignment PIN_29 -to ext_clk
+
+# sdram
+set_location_assignment PIN_203 -to sdram_a[0]
+set_location_assignment PIN_206 -to sdram_a[1]
+set_location_assignment PIN_207 -to sdram_a[2]
+set_location_assignment PIN_208 -to sdram_a[3]
+set_location_assignment PIN_235 -to sdram_a[4]
+set_location_assignment PIN_234 -to sdram_a[5]
+set_location_assignment PIN_233 -to sdram_a[6]
+set_location_assignment PIN_228 -to sdram_a[7]
+set_location_assignment PIN_227 -to sdram_a[8]
+set_location_assignment PIN_226 -to sdram_a[9]
+set_location_assignment PIN_202 -to sdram_a[10]
+set_location_assignment PIN_225 -to sdram_a[11]
+set_location_assignment PIN_224 -to sdram_a[12]
+set_location_assignment PIN_181 -to sdram_dq[0]
+set_location_assignment PIN_182 -to sdram_dq[1]
+set_location_assignment PIN_183 -to sdram_dq[2]
+set_location_assignment PIN_184 -to sdram_dq[3]
+set_location_assignment PIN_185 -to sdram_dq[4]
+set_location_assignment PIN_186 -to sdram_dq[5]
+set_location_assignment PIN_187 -to sdram_dq[6]
+set_location_assignment PIN_188 -to sdram_dq[7]
+set_location_assignment PIN_222 -to sdram_dq[8]
+set_location_assignment PIN_219 -to sdram_dq[9]
+set_location_assignment PIN_218 -to sdram_dq[10]
+set_location_assignment PIN_217 -to sdram_dq[11]
+set_location_assignment PIN_216 -to sdram_dq[12]
+set_location_assignment PIN_215 -to sdram_dq[13]
+set_location_assignment PIN_214 -to sdram_dq[14]
+set_location_assignment PIN_213 -to sdram_dq[15]
+set_location_assignment PIN_200 -to sdram_ba[0]
+set_location_assignment PIN_201 -to sdram_ba[1]
+set_location_assignment PIN_38 -to sdram_clk
+set_location_assignment PIN_39 -to sdram_cke
+set_location_assignment PIN_193 -to sdram_dqm[0]
+set_location_assignment PIN_223 -to sdram_dqm[1]
+set_location_assignment PIN_197 -to sdram_cs_n
+set_location_assignment PIN_196 -to sdram_ras_n
+set_location_assignment PIN_195 -to sdram_cas_n
+set_location_assignment PIN_194 -to sdram_we_n
+
+# sd
+set_location_assignment PIN_61 -to sd_dat1
+set_location_assignment PIN_62 -to sd_miso
+set_location_assignment PIN_63 -to sd_sck
+set_location_assignment PIN_64 -to sd_mosi
+set_location_assignment PIN_65 -to sd_cs_n
+set_location_assignment PIN_66 -to sd_dat2
+
+# ps2
+set_location_assignment PIN_67 -to ps2_data
+set_location_assignment PIN_68 -to ps2_clk
+
+# vga
+set_location_assignment PIN_73 -to ddc_sda
+set_location_assignment PIN_74 -to vga_vs_n
+set_location_assignment PIN_75 -to vga_hs_n
+set_location_assignment PIN_76 -to ddc_scl
+set_location_assignment PIN_95 -to vga_r[0]
+set_location_assignment PIN_98 -to vga_r[1]
+set_location_assignment PIN_99 -to vga_r[2]
+set_location_assignment PIN_100 -to vga_r[3]
+set_location_assignment PIN_101 -to vga_r[4]
+set_location_assignment PIN_104 -to vga_r[5]
+set_location_assignment PIN_85 -to vga_g[0]
+set_location_assignment PIN_86 -to vga_g[1]
+set_location_assignment PIN_87 -to vga_g[2]
+set_location_assignment PIN_88 -to vga_g[3]
+set_location_assignment PIN_93 -to vga_g[4]
+set_location_assignment PIN_94 -to vga_g[5]
+set_location_assignment PIN_77 -to vga_b[0]
+set_location_assignment PIN_78 -to vga_b[1]
+set_location_assignment PIN_79 -to vga_b[2]
+set_location_assignment PIN_82 -to vga_b[3]
+set_location_assignment PIN_83 -to vga_b[4]
+set_location_assignment PIN_84 -to vga_b[5]
+
+# audio
+set_location_assignment PIN_105 -to audio_l[0]
+set_location_assignment PIN_106 -to audio_l[1]
+set_location_assignment PIN_107 -to audio_l[2]
+set_location_assignment PIN_108 -to audio_l[3]
+set_location_assignment PIN_113 -to audio_l[4]
+set_location_assignment PIN_114 -to audio_l[5]
+set_location_assignment PIN_115 -to audio_r[0]
+set_location_assignment PIN_116 -to audio_r[1]
+set_location_assignment PIN_117 -to audio_r[2]
+set_location_assignment PIN_118 -to audio_r[3]
+set_location_assignment PIN_119 -to audio_r[4]
+set_location_assignment PIN_120 -to audio_r[5]
+
+# joy1
+set_location_assignment PIN_1 -to joy1_up
+set_location_assignment PIN_3 -to joy1_down
+set_location_assignment PIN_5 -to joy1_left
+set_location_assignment PIN_7 -to joy1_right
+set_location_assignment PIN_2 -to joy1_a
+set_location_assignment PIN_4 -to joy1_b
+set_location_assignment PIN_6 -to joy1_strobe
+
+# joy2
+set_location_assignment PIN_8 -to joy2_up
+set_location_assignment PIN_12 -to joy2_down
+set_location_assignment PIN_14 -to joy2_left
+set_location_assignment PIN_16 -to joy2_right
+set_location_assignment PIN_11 -to joy2_a
+set_location_assignment PIN_13 -to joy2_b
+set_location_assignment PIN_15 -to joy2_strobe
+
+# cartridge
+set_location_assignment PIN_121 -to cart_sltsl2_n
+set_location_assignment PIN_122 -to cart_cs1_n
+set_location_assignment PIN_123 -to cart_cs2_n
+set_location_assignment PIN_124 -to cart_cs12_n
+set_location_assignment PIN_125 -to cart_sltsl1_n
+set_location_assignment PIN_126 -to cart_rsv5
+set_location_assignment PIN_127 -to cart_rfsh_n
+set_location_assignment PIN_128 -to cart_wait_n
+set_location_assignment PIN_131 -to cart_int_n
+set_location_assignment PIN_132 -to cart_m1_n
+set_location_assignment PIN_133 -to cart_bdir
+set_location_assignment PIN_134 -to cart_iorq_n
+set_location_assignment PIN_135 -to cart_merq_n
+set_location_assignment PIN_136 -to cart_wr_n
+set_location_assignment PIN_137 -to cart_rd_n
+set_location_assignment PIN_138 -to cart_rsv16
+set_location_assignment PIN_139 -to cart_a9
+set_location_assignment PIN_140 -to cart_a15
+set_location_assignment PIN_141 -to cart_a11
+set_location_assignment PIN_143 -to cart_a10
+set_location_assignment PIN_144 -to cart_clock_out
+set_location_assignment PIN_152 -to cart_clock_return
+set_location_assignment PIN_153 -to cart_reset_n
+set_location_assignment PIN_156 -to cart_a7
+set_location_assignment PIN_158 -to cart_a6
+set_location_assignment PIN_159 -to cart_a12
+set_location_assignment PIN_160 -to cart_a8
+set_location_assignment PIN_161 -to cart_a14
+set_location_assignment PIN_162 -to cart_a13
+set_location_assignment PIN_163 -to cart_a1
+set_location_assignment PIN_164 -to cart_a0
+set_location_assignment PIN_165 -to cart_a3
+set_location_assignment PIN_166 -to cart_a2
+set_location_assignment PIN_167 -to cart_a5
+set_location_assignment PIN_168 -to cart_a4
+set_location_assignment PIN_169 -to cart_d1
+set_location_assignment PIN_170 -to cart_d0
+set_location_assignment PIN_173 -to cart_d3
+set_location_assignment PIN_174 -to cart_d2
+set_location_assignment PIN_175 -to cart_d5
+set_location_assignment PIN_176 -to cart_d4
+set_location_assignment PIN_177 -to cart_d7
+set_location_assignment PIN_178 -to cart_d6
+set_location_assignment PIN_179 -to cart_sw1
+set_location_assignment PIN_180 -to cart_sw2
+
+# esp8266
+set_location_assignment PIN_237 -to esp_txd
+set_location_assignment PIN_236 -to esp_rxd
+set_location_assignment PIN_238 -to unused_238
+set_location_assignment PIN_239 -to unused_239
+
+# Request I/O-cell registers where the RTL and Cyclone I pin resources allow.
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_a[*]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_ba[*]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dq[*]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dqm[*]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_cs_n
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_ras_n
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_cas_n
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_we_n
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_cke
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[*]
+
+set_global_assignment -name LAST_QUARTUS_VERSION "11.0 SP1"
+set_global_assignment -name RESERVE_ALL_UNUSED_PINS_NO_OUTPUT_GND "AS INPUT TRI-STATED"
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[0]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[1]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[2]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[3]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[4]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[5]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[6]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[7]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[8]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[9]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[10]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[11]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[12]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[13]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[14]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[15]
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
