@@ -56,6 +56,7 @@ rtl=(
     rtl/audio/ay_3_8912.v
     rtl/storage/boot_sd_bridge.v
     rtl/storage/sd_spi_reader.v
+    rtl/media/tap_player.v
 )
 
 # 3. Verilator Verilog-2001 lint across the full hierarchy
