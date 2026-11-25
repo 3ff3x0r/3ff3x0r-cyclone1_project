@@ -197,6 +197,7 @@ module trhmsx_spectrum_top #(
         .pending_timing_id(3'd0), .pending_paging_id(3'd0), .pending_rom_set_id(16'd0),
         .pending_rom_valid_mask(4'd0), .pending_psg_enable(1'b0), .pending_disk_kind(2'd0),
         .pending_input_map_id(2'd0), .pending_joy1_b_map(2'd0), .pending_joy2_b_map(2'd0),
+        .pending_tap_mounted(1'b0), .pending_tap_base(22'd0), .pending_tap_length(32'd0),
         .boot_commit_valid(1'b0), .boot_commit_ready(),
         .boot_stage_ok(1'b0), .boot_ram_init_ok(1'b0),
         .boot_publish(), .boot_commit_done(), .boot_error(), .boot_recovery(),

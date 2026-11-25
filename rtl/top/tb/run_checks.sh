@@ -56,6 +56,7 @@ rtl=(
     rtl/audio/ay_3_8912.v
     rtl/storage/boot_sd_bridge.v
     rtl/storage/sd_spi_reader.v
+    rtl/media/tap_player.v
 )
 
 # 3. Verilator Verilog-2001 lint across the full hierarchy
@@ -95,3 +96,4 @@ iverilog -g2012 -s spectrum_top_tb -o "$build/spectrum_top.vvp" \
     "${rtl[@]}" "$build/cpu_netlist.v" rtl/memory/tb/sdram_x16_model.v \
     rtl/core/tb/cpu_clock_model.v rtl/top/tb/spectrum_top_tb.v
 vvp -N "$build/spectrum_top.vvp" "+cpu_align=${CPU_ALIGNMENT:-0}"
+vvp -N "$build/spectrum_top.vvp" "+cpu_align=${CPU_ALIGNMENT:-0}" +bringup

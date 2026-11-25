@@ -37,8 +37,26 @@ module boot_bus_adapter #(
     initial begin
         for (idx = 0; idx < 4096; idx = idx + 1)
             boot_rom[idx] = 8'h76; // Z80 HALT default
-        if (BOOT_ROM_FILE != "")
+        if (BOOT_ROM_FILE != "") begin
             $readmemh(BOOT_ROM_FILE, boot_rom);
+        end else begin
+            // Built-in hardware smoke test. LDIR propagates each seed byte
+            // across its screen region using overlapping source and destination.
+            boot_rom[0]  = 8'hf3;                                             // DI
+            boot_rom[1]  = 8'h3e; boot_rom[2]  = 8'h05;                       // LD A,05h (cyan)
+            boot_rom[3]  = 8'hd3; boot_rom[4]  = 8'hfe;                       // OUT (FEh),A
+            boot_rom[5]  = 8'h21; boot_rom[6]  = 8'h00; boot_rom[7]  = 8'h40; // LD HL,4000h
+            boot_rom[8]  = 8'h36; boot_rom[9]  = 8'haa;                       // LD (HL),AAh (vertical stripes)
+            boot_rom[10] = 8'h11; boot_rom[11] = 8'h01; boot_rom[12] = 8'h40; // LD DE,4001h
+            boot_rom[13] = 8'h01; boot_rom[14] = 8'hff; boot_rom[15] = 8'h17; // LD BC,17FFh
+            boot_rom[16] = 8'hed; boot_rom[17] = 8'hb0;                       // LDIR through 57FFh
+            boot_rom[18] = 8'h21; boot_rom[19] = 8'h00; boot_rom[20] = 8'h58; // LD HL,5800h
+            boot_rom[21] = 8'h36; boot_rom[22] = 8'h4f;                       // LD (HL),4Fh (bright white on blue)
+            boot_rom[23] = 8'h11; boot_rom[24] = 8'h01; boot_rom[25] = 8'h58; // LD DE,5801h
+            boot_rom[26] = 8'h01; boot_rom[27] = 8'hff; boot_rom[28] = 8'h02; // LD BC,02FFh
+            boot_rom[29] = 8'hed; boot_rom[30] = 8'hb0;                       // LDIR through 5AFFh
+            boot_rom[31] = 8'h18; boot_rom[32] = 8'hfe;                       // JR $
+        end
     end
 
     wire active      = boot_overlay && boot_bus_req;

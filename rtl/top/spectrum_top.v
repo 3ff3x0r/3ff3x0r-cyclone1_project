@@ -54,6 +54,10 @@ module spectrum_top #(
     input  wire [1:0]  pending_input_map_id,
     input  wire [1:0]  pending_joy1_b_map,
     input  wire [1:0]  pending_joy2_b_map,
+    // Staged media descriptor, stable until the loader samples boot_publish.
+    input  wire        pending_tap_mounted,
+    input  wire [21:0] pending_tap_base,
+    input  wire [31:0] pending_tap_length,
     input  wire        boot_commit_valid,
     output wire        boot_commit_ready,
     input  wire        boot_stage_ok,
@@ -65,7 +69,7 @@ module spectrum_top #(
     input  wire        loader_diag_active,
     input  wire [7:0]  loader_diag_code,
 
-    // Optional external loader/media DMA port (active when promotion is idle)
+    // Optional external loader/media DMA port
     input  wire        ext_ld_mem_req,
     output wire        ext_ld_mem_accept,
     input  wire [21:0] ext_ld_mem_addr,
@@ -88,7 +92,8 @@ module spectrum_top #(
     wire        media_quiesce;
     wire        sd_idle;
     wire        boot_sd_idle;
-    wire        media_idle = sd_idle && boot_sd_idle;
+    wire        tap_idle;
+    wire        media_idle = sd_idle && boot_sd_idle && tap_idle;
 
     wire        sd_owner_boot;
     wire        cpu_reset_n;
@@ -139,21 +144,68 @@ module spectrum_top #(
     assign boot_mem_rdata  = mem_cpu_rdata;
     assign core_mem_rdata  = mem_cpu_rdata;
 
-    // Loader port muxing: ROM promotion vs external loader/media
-    wire        ld_mem_req    = promo_active ? promo_mem_req   : ext_ld_mem_req;
-    wire [21:0] ld_mem_addr   = promo_active ? promo_mem_addr  : ext_ld_mem_addr;
-    wire        ld_mem_we     = promo_active ? promo_mem_we    : ext_ld_mem_we;
-    wire [7:0]  ld_mem_wdata  = promo_active ? promo_mem_wdata : ext_ld_mem_wdata;
+    wire        tap_rd_req, tap_rd_accept, tap_rd_valid;
+    wire [31:0] tap_rd_offset;
+    reg  [18:0] tap_cache_base, tap_cache_addr;
+    reg         tap_addr_ready;
+    wire        tap_mem_req = tap_rd_req && tap_addr_ready;
+
+    // The player checks the full mounted span and bounds each file offset.
+    // Thus an accepted address lies in 080000-0fffff without low-bit wrap.
+    // Register the translation ahead of the shared SDRAM request mux.
+    always @(posedge clk_sys or negedge rst_n) begin
+        if (!rst_n) begin
+            tap_cache_base <= 19'd0;
+            tap_cache_addr <= 19'd0;
+            tap_addr_ready <= 1'b0;
+        end else begin
+            if (boot_publish)
+                tap_cache_base <= pending_tap_base[18:0];
+            if (!tap_rd_req || tap_rd_accept) begin
+                tap_addr_ready <= 1'b0;
+            end else if (!tap_addr_ready) begin
+                tap_cache_addr <= tap_cache_base + tap_rd_offset[18:0];
+                tap_addr_ready <= 1'b1;
+            end
+        end
+    end
+
+    // Promotion is exclusive. TAP prefetch has priority over external DMA.
+    // Route read completions by the accepted owner even after quiesce or
+    // rewind withdraws the TAP request.
+    localparam [1:0] LD_NONE = 2'd0, LD_PROMO = 2'd1,
+                     LD_TAP = 2'd2, LD_EXTERNAL = 2'd3;
+    reg  [1:0]  ld_read_owner;
+    wire        ld_can_issue = ld_read_owner == LD_NONE;
+    wire        select_tap = !promo_active && tap_mem_req;
+    wire        select_external = !promo_active && !tap_mem_req && !media_quiesce;
+    wire        ld_mem_req = ld_can_issue && (promo_active ? promo_mem_req :
+                                            (select_tap || (select_external && ext_ld_mem_req)));
+    wire [21:0] ld_mem_addr = promo_active ? promo_mem_addr :
+                             select_tap ? {3'b001, tap_cache_addr} : ext_ld_mem_addr;
+    wire        ld_mem_we = promo_active ? promo_mem_we : select_external && ext_ld_mem_we;
+    wire [7:0]  ld_mem_wdata = promo_active ? promo_mem_wdata : ext_ld_mem_wdata;
     wire        ld_mem_accept;
     wire        ld_mem_rvalid;
     wire [7:0]  ld_mem_rdata;
 
-    assign promo_mem_accept  = promo_active ? ld_mem_accept : 1'b0;
-    assign ext_ld_mem_accept = !promo_active ? ld_mem_accept : 1'b0;
-    assign promo_mem_rvalid  = promo_active ? ld_mem_rvalid : 1'b0;
-    assign ext_ld_mem_rvalid = !promo_active ? ld_mem_rvalid : 1'b0;
+    assign promo_mem_accept  = ld_can_issue && promo_active && ld_mem_accept;
+    assign tap_rd_accept     = ld_can_issue && select_tap && ld_mem_accept;
+    assign ext_ld_mem_accept = ld_can_issue && select_external && ld_mem_accept;
+    assign promo_mem_rvalid  = ld_mem_rvalid && ld_read_owner == LD_PROMO;
+    assign tap_rd_valid      = ld_mem_rvalid && ld_read_owner == LD_TAP;
+    assign ext_ld_mem_rvalid = ld_mem_rvalid && ld_read_owner == LD_EXTERNAL;
     assign promo_mem_rdata   = ld_mem_rdata;
     assign ext_ld_mem_rdata  = ld_mem_rdata;
+
+    always @(posedge clk_sys or negedge rst_n) begin
+        if (!rst_n)
+            ld_read_owner <= LD_NONE;
+        else if (ld_mem_rvalid)
+            ld_read_owner <= LD_NONE;
+        else if (ld_mem_req && ld_mem_accept && !ld_mem_we)
+            ld_read_owner <= promo_active ? LD_PROMO : select_tap ? LD_TAP : LD_EXTERNAL;
+    end
 
     // Boot CPU bus & SD bridge wires
     wire        boot_bus_req, boot_bus_io, boot_bus_we, boot_bus_ready;
@@ -185,6 +237,7 @@ module spectrum_top #(
     wire [5:0]  joy1, joy2;
     wire        soft_reset_key, recovery_key, tap_play_toggle, tap_rewind;
     wire        ear_bit, mic_bit, beeper_bit, mic_out;
+    wire        tap_playing, tap_ear_valid, tap_ear_bit;
     wire        ay_req;
     wire [1:0]  ay_op;
     wire [7:0]  ay_wdata, ay_rdata;
@@ -196,7 +249,7 @@ module spectrum_top #(
     // Tie off unused future Ticket G / profile metadata wires cleanly
     wire unused_signals = &{
         1'b0, cfg_profile_id, cfg_ram_size_id, cfg_rom_set_id,
-        tap_play_toggle, tap_rewind, mic_out,
+        tap_playing, tap_rd_offset[31:19], mic_out,
         disk_req, disk_we, disk_reg, disk_wdata, disk_motor,
         sd_blk_tx_ready
     };
@@ -325,6 +378,20 @@ module spectrum_top #(
         .tap_play_toggle(tap_play_toggle), .tap_rewind(tap_rewind)
     );
 
+    // Publish the mount while guest reset and media quiesce are asserted.
+    tap_player tape (
+        .clk_sys(clk_sys), .rst_n(rst_n), .guest_reset_n(guest_reset_n),
+        .boot_overlay(boot_overlay), .media_quiesce(media_quiesce),
+        .ce_cpu(ce_cpu), .cfg_timing_id(cfg_timing_id),
+        .tap_mount_update(boot_publish), .tap_mounted(pending_tap_mounted),
+        .tap_base(pending_tap_base), .tap_length(pending_tap_length),
+        .tap_rd_req(tap_rd_req), .tap_rd_offset(tap_rd_offset),
+        .tap_rd_accept(tap_rd_accept), .tap_rd_valid(tap_rd_valid), .tap_rd_data(ld_mem_rdata),
+        .tap_play_toggle(tap_play_toggle), .tap_rewind(tap_rewind),
+        .tap_playing(tap_playing), .tap_ear_valid(tap_ear_valid),
+        .tap_ear_bit(tap_ear_bit), .tap_idle(tap_idle)
+    );
+
     audio_subsystem audio (
         .clk_sys(clk_sys), .rst_n(rst_n),
         .guest_reset_n(guest_reset_n), .cfg_psg_enable(cfg_psg_enable),
@@ -332,7 +399,7 @@ module spectrum_top #(
         .ay_wdata(ay_wdata), .ay_rdata(ay_rdata),
         .beeper_bit(beeper_bit), .mic_bit(mic_bit),
         .mic_record(1'b0), .mic_out(mic_out),
-        .ear_idle_bit(1'b1), .tap_ear_valid(1'b0), .tap_ear_bit(1'b0),
+        .ear_idle_bit(1'b1), .tap_ear_valid(tap_ear_valid), .tap_ear_bit(tap_ear_bit),
         .ear_bit(ear_bit), .audio_l(audio_l), .audio_r(audio_r)
     );
 

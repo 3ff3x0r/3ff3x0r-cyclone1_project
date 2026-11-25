@@ -4,6 +4,8 @@ set_global_assignment -name TOP_LEVEL_ENTITY trhmsx_spectrum_top
 set_global_assignment -name LAST_QUARTUS_VERSION "11.0 SP1"
 set_global_assignment -name VERILOG_INPUT_VERSION VERILOG_2001
 set_global_assignment -name USE_TIMEQUEST_TIMING_ANALYZER ON
+
+# Assemble trhmsx_spectrum.pof for the EPCS4 on Active Serial header J8.
 set_global_assignment -name CYCLONE_CONFIGURATION_SCHEME "ACTIVE SERIAL"
 set_global_assignment -name USE_CONFIGURATION_DEVICE ON
 set_global_assignment -name CYCLONE_CONFIGURATION_DEVICE EPCS4
@@ -38,6 +40,7 @@ set_global_assignment -name VERILOG_FILE ../../rtl/audio/audio_subsystem.v
 set_global_assignment -name VERILOG_FILE ../../rtl/audio/ay_3_8912.v
 set_global_assignment -name VERILOG_FILE ../../rtl/storage/boot_sd_bridge.v
 set_global_assignment -name VERILOG_FILE ../../rtl/storage/sd_spi_reader.v
+set_global_assignment -name VERILOG_FILE ../../rtl/media/tap_player.v
 set_global_assignment -name VHDL_FILE ../../vendor/ZX_Spectrum-128K_MIST/T80/T80_Pack.vhd
 set_global_assignment -name VHDL_FILE ../../vendor/ZX_Spectrum-128K_MIST/T80/T80_ALU.vhd
 set_global_assignment -name VHDL_FILE ../../vendor/ZX_Spectrum-128K_MIST/T80/T80_MCode.vhd

@@ -80,7 +80,7 @@ module core_subsystem (
     end
     wire guest_on = cpu_on && !boot_overlay && cfg_valid;
     wire guest_run = guest_reset_n && !boot_overlay;
-    wire [2:0] timing_id = cfg_valid && !boot_overlay ? cfg_timing_id : 3'd0;
+    wire [2:0] timing_id = (boot_overlay || cfg_valid) ? cfg_timing_id : 3'd0;
     wire is_plus3 = cfg_paging_id == 3'd3;
     wire is_tk = timing_id == 3'd3 || timing_id == 3'd4;
 
@@ -335,10 +335,20 @@ module core_subsystem (
     );
 
     wire [2:0] border;
+    reg [2:0] boot_border;
+    always @(posedge clk_sys or negedge rst_n) begin
+        if (!rst_n)
+            boot_border <= 3'd0;
+        else if (!boot_overlay)
+            boot_border <= 3'd0;
+        else if (boot_take && boot_bus_io && boot_bus_we && boot_bus_addr[7:0] == 8'hfe)
+            boot_border <= boot_bus_wdata[2:0];
+    end
+
     spectrum_ula ula (
         .clk_sys(clk_sys), .rst_n(rst_n), .run(boot_overlay || guest_reset_n),
         .ce_cpu(ce_cpu), .ce_ula(ce_ula), .timing_id(timing_id),
-        .border(boot_overlay ? 3'd0 : border), .screen_bank7(!boot_overlay && screen_bank7),
+        .border(boot_overlay ? boot_border : border), .screen_bank7(!boot_overlay && screen_bank7),
         .screen_rd_req(screen_rd_req), .screen_rd_bank7(screen_rd_bank7),
         .screen_rd_offset(screen_rd_offset), .screen_rd_valid(screen_rd_valid),
         .screen_rd_data(screen_rd_data), .ula_px_ce(ula_px_ce), .ula_color(ula_color),

@@ -69,12 +69,12 @@ module boot_bus_adapter_tb;
         rst_n = 1'b1;
         tick;
 
-        // 1. Boot ROM read at 0000 (expects default 76h on next cycle)
+        // 1. Boot ROM read at 0000 (the smoke test starts with DI).
         boot_bus_req = 1'b1; boot_bus_io = 1'b0; boot_bus_we = 1'b0; boot_bus_addr = 16'h0000;
         #1;
         if (boot_bus_ready) begin $display("FAIL ROM ready too early"); $finish; end
         tick;
-        if (!boot_bus_ready || boot_bus_rdata !== 8'h76) begin
+        if (!boot_bus_ready || boot_bus_rdata !== 8'hf3) begin
             $display("FAIL ROM read: ready=%b data=%h", boot_bus_ready, boot_bus_rdata);
             $finish;
         end

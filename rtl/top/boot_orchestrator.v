@@ -70,6 +70,8 @@ module boot_orchestrator #(
     input  wire        promo_mem_rvalid,
     input  wire [7:0]  promo_mem_rdata
 );
+    localparam [2:0] BOOT_TIMING_ID = 3'd4; // TK90X PAL-M (60 Hz)
+
     localparam [3:0]
         ST_BOOT_WAIT     = 4'd0,
         ST_BOOT_RUN      = 4'd1,
@@ -194,7 +196,7 @@ module boot_orchestrator #(
             cfg_valid          <= 1'b0;
             cfg_profile_id     <= 4'd0;
             cfg_ram_size_id    <= 2'd0;
-            cfg_timing_id      <= 3'd0;
+            cfg_timing_id      <= BOOT_TIMING_ID;
             cfg_paging_id      <= 3'd0;
             cfg_rom_set_id     <= 16'd0;
             cfg_rom_valid_mask <= 4'd0;
@@ -402,6 +404,7 @@ module boot_orchestrator #(
                     if (cpu_quiesced && media_idle && mem_idle) begin
                         cpu_reset_n   <= 1'b0;
                         guest_reset_n <= 1'b0;
+                        cfg_timing_id <= BOOT_TIMING_ID;
                         boot_overlay  <= 1'b1;
                         sd_owner_boot <= 1'b1;
                         boot_recovery <= 1'b1;
