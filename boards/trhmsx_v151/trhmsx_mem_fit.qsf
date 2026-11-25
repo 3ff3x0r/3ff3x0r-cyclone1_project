@@ -194,7 +194,6 @@ set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_ras_n
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_cas_n
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_we_n
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_cke
-set_instance_assignment -name FAST_INPUT_REGISTER ON -to sdram_dq[*]
 set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[*]
 
 set_global_assignment -name LAST_QUARTUS_VERSION "11.0 SP1"
