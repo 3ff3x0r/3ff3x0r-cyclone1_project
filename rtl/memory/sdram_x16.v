@@ -76,10 +76,11 @@ module sdram_x16 #(
     localparam T_WR  = 1 + cycles(T_WR_EXTRA_PS);
     localparam T_MRD = 3;
     localparam CAS_LATENCY = 3;
-    // The PLL clocks SDRAM just before clk_sys. A command launched on
-    // clk_sys reaches the next SDRAM edge. DQ appears after the CAS edge
-    // and is captured on the clk_sys edge just after the next SDRAM edge.
-    localparam READ_CAPTURE = CAS_LATENCY + 2;
+    // READ launched on fabric rising edge 0 registers on SDRAM T0
+    // just before fabric edge 1. CL3 launches DQ from T2, just before
+    // fabric edge 3. Capture on the falling edge after edge 3 and
+    // publish the response on rising edge 4.
+    localparam READ_RETURN = CAS_LATENCY + 1;
     localparam MIN_ACCESS_TO_PRE = max_cycles(T_RAS, T_RC - T_RP) - T_RCD;
     localparam WRITE_TO_PRE = max_cycles(T_WR, MIN_ACCESS_TO_PRE);
     // A one-word SDR read can precharge starting one edge after READ.
@@ -135,8 +136,9 @@ module sdram_x16 #(
     reg        active_we;
     reg [7:0]  active_wdata;
     reg        transfer_pending;
-    reg [READ_CAPTURE-1:0] read_pipeline;
+    reg [READ_RETURN-1:0] read_pipeline;
     reg        read_high_lane;
+    reg [15:0] captured_dq;
 
     wire timing_done = (delay_left == 0);
     wire refresh_due = (refresh_age >= REFRESH_THRESHOLD);
@@ -190,6 +192,12 @@ module sdram_x16 #(
     reg pin_dq_oe;
     assign {sdram_cs_n, sdram_ras_n, sdram_cas_n, sdram_we_n} = pin_command;
     assign sdram_dq = pin_dq_oe ? {pin_wdata, pin_wdata} : 16'bz;
+
+    // Sample both lanes directly at the pins without a reset. Reset clears
+    // the read pipeline, so rvalid can only qualify a fresh falling-edge
+    // sample from a new READ.
+    always @(negedge clk_sys)
+        captured_dq <= sdram_dq;
 
     always @(posedge clk_sys or negedge rst_n) begin
         if (!rst_n) begin
@@ -262,17 +270,17 @@ module sdram_x16 #(
             active_we <= 1'b0;
             active_wdata <= 8'b0;
             transfer_pending <= 1'b0;
-            read_pipeline <= {READ_CAPTURE{1'b0}};
+            read_pipeline <= {READ_RETURN{1'b0}};
             read_high_lane <= 1'b0;
             rvalid <= 1'b0;
             rdata <= 8'b0;
         end else begin
-            read_pipeline <= {read_pipeline[READ_CAPTURE-2:0], read_cycle};
-            rvalid <= read_pipeline[READ_CAPTURE-1];
+            read_pipeline <= {read_pipeline[READ_RETURN-2:0], read_cycle};
+            rvalid <= read_pipeline[READ_RETURN-1];
             if (read_cycle)
                 read_high_lane <= active_addr[0];
-            if (read_pipeline[READ_CAPTURE-1])
-                rdata <= read_high_lane ? sdram_dq[15:8] : sdram_dq[7:0];
+            if (read_pipeline[READ_RETURN-1])
+                rdata <= read_high_lane ? captured_dq[15:8] : captured_dq[7:0];
             if (read_cycle || write_commit)
                 transfer_pending <= 1'b0;
 

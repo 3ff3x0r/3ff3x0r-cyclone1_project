@@ -126,6 +126,8 @@ module trhmsx_mem_fit_top (
     assign sdram_clk = pll_ext_clocks[0];
 
     // PLL1 drives the fabric on c0 and the dedicated U1-38 pad on e0.
+    // Request the 2.909 ns e0 lead achieved in the XP fit. TimeQuest
+    // derives the fitted phases for rising-edge commands and falling-edge DQ.
     altpll #(
         .intended_device_family("Cyclone"),
         .operation_mode("NORMAL"),
@@ -138,7 +140,7 @@ module trhmsx_mem_fit_top (
         .extclk0_multiply_by(4),
         .extclk0_divide_by(1),
         .extclk0_duty_cycle(50),
-        .extclk0_phase_shift("-3000"),
+        .extclk0_phase_shift("-2909"),
         .width_clock(6),
         .port_inclk0("PORT_USED"),
         .port_areset("PORT_USED"),
@@ -202,6 +204,8 @@ module trhmsx_mem_fit_top (
     reg [7:0] cpu_sample;
     reg [7:0] ld_sample;
     reg [7:0] screen_sample;
+    reg [7:0] screen_check_expected;
+    reg screen_check_valid;
     reg test_failed;
 
     wire writing = (state == WRITE_PAIR);
@@ -272,8 +276,14 @@ module trhmsx_mem_fit_top (
             cpu_sample <= 8'd0;
             ld_sample <= 8'd0;
             screen_sample <= 8'd0;
+            screen_check_expected <= 8'd0;
+            screen_check_valid <= 1'b0;
             test_failed <= 1'b0;
         end else begin
+            screen_check_valid <= 1'b0;
+            if (screen_check_valid && screen_sample != screen_check_expected)
+                test_failed <= 1'b1;
+
             if (cpu_mem_req && cpu_mem_accept)
                 cpu_accepted <= 1'b1;
             if (ld_mem_req && ld_mem_accept)
@@ -313,24 +323,27 @@ module trhmsx_mem_fit_top (
                 SCREEN_WAIT: begin
                     if (screen_rd_valid) begin
                         screen_sample <= screen_rd_data;
-                        if (screen_rd_data != screen_expected)
-                            test_failed <= 1'b1;
+                        screen_check_expected <= screen_expected;
+                        screen_check_valid <= 1'b1;
                         screen_rd_bank7 <= ~screen_rd_bank7;
                         state <= screen_rd_bank7 ? NEXT_BYTE : SCREEN_REQ;
                     end
                 end
                 NEXT_BYTE: begin
-                    if (offset == 13'd6911) begin
-                        offset <= 13'd0;
-                        general_sweep <= ~general_sweep;
-                        if (general_sweep)
-                            invert_pattern <= ~invert_pattern;
-                    end else begin
-                        offset <= offset + 13'd1;
+                    // Let the final check of the pair retire before advancing.
+                    if (!screen_check_valid) begin
+                        if (offset == 13'd6911) begin
+                            offset <= 13'd0;
+                            general_sweep <= ~general_sweep;
+                            if (general_sweep)
+                                invert_pattern <= ~invert_pattern;
+                        end else begin
+                            offset <= offset + 13'd1;
+                        end
+                        cpu_accepted <= 1'b0;
+                        ld_accepted <= 1'b0;
+                        state <= WRITE_PAIR;
                     end
-                    cpu_accepted <= 1'b0;
-                    ld_accepted <= 1'b0;
-                    state <= WRITE_PAIR;
                 end
                 default: state <= NEXT_BYTE;
             endcase

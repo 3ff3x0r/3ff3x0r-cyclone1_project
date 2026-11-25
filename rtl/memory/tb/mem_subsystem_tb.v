@@ -1,10 +1,10 @@
 `timescale 1ps/1ps
 
 module mem_subsystem_tb #(
-    parameter SMALL_SDRAM = 0
+    parameter SMALL_SDRAM = 0,
+    parameter SDRAM_CLK_LEAD_PS = 2909
 );
     localparam CLK_PS = 11640;
-    localparam SDRAM_CLK_LEAD_PS = 1000;
     localparam POWERUP_CYCLES = SMALL_SDRAM ? 16 : (100000000 + CLK_PS - 1) / CLK_PS;
     localparam ROW_BITS = SMALL_SDRAM ? 11 : 13;
     localparam COL_BITS = SMALL_SDRAM ? 8 : 9;
@@ -12,15 +12,14 @@ module mem_subsystem_tb #(
     localparam SCREEN_BYTES = 6912;
     localparam [3:0] CMD_READ = 4'b0101, CMD_WRITE = 4'b0100, CMD_REFRESH = 4'b0001;
     // In default timing, a write uses at most 6 clocks before the next
-    // dispatch, a read uses 9, and one refresh can add 6. A CPU request
+    // dispatch, a read uses 8, and one refresh can add 6. A CPU request
     // can arrive one clock after the first of two older transactions.
-    localparam MAX_CPU_READ_CYCLES = 6 + 9 + 6 + 9 - 1;
+    localparam MAX_CPU_READ_CYCLES = 6 + 8 + 6 + 8 - 1;
 
     reg clk_sys = 0;
     always #(CLK_PS/2) clk_sys = ~clk_sys;
 
-    // Emulate the dedicated PLL output. The SDRAM samples registered
-    // commands on the leading edge, then clk_sys samples held read data.
+    // Emulate the e0 lead achieved in the XP fit and requested by the RTL.
     reg sdram_clk = 0;
     initial begin
         #(CLK_PS/2 - SDRAM_CLK_LEAD_PS);
@@ -134,12 +133,10 @@ module mem_subsystem_tb #(
     integer latency_reads = 0, refresh_under_load = 0, refresh_with_cpu_waiting = 0;
     integer both_accepted = 0, consecutive_cpu = 0;
     integer forward_bank5 = 0, forward_bank7 = 0, different_byte = 0;
-    integer read_dq_sample_cycle = -1;
     reg cpu_read_live = 0, cpu_read_issued = 0;
     reg ld_read_live = 0, ld_read_issued = 0;
     reg [7:0] cpu_expected, ld_expected;
     reg [1:0] expected_mask;
-    reg [1:0] read_dq_mask;
     reg [7:0] expected_screen_data;
     reg expected_screen_valid;
     reg stress = 0;
@@ -194,6 +191,20 @@ module mem_subsystem_tb #(
             $fatal(1, "mem_ready asserted before the mode register settled");
     end
 
+    // Observe the pin burst during its guaranteed valid interval, two
+    // SDRAM clocks plus 7 ns after READ, independently of FPGA capture.
+    reg [1:0] read_dq_mask;
+    always @(posedge sdram_clk) begin
+        if (rst_n && command == CMD_READ) begin
+            read_dq_mask = sdram_dqm;
+            #(2 * CLK_PS + 7000);
+            if (read_dq_mask[0] && sdram_dq[7:0] !== 8'bz)
+                $fatal(1, "Low DQ lane driven during masked read");
+            if (read_dq_mask[1] && sdram_dq[15:8] !== 8'bz)
+                $fatal(1, "High DQ lane driven during masked read");
+        end
+    end
+
     always @(posedge clk_sys) begin
         cycle = cycle + 1;
         if (!rst_n) begin
@@ -207,12 +218,6 @@ module mem_subsystem_tb #(
                 $fatal(1, "Incorrect mem_idle at cycle %0d", cycle);
             if (!mem_ready && (cpu_mem_accept || ld_mem_accept))
                 $fatal(1, "Accepted before mem_ready");
-            if (cycle == read_dq_sample_cycle) begin
-                if (read_dq_mask[0] && sdram_dq[7:0] !== 8'bz)
-                    $fatal(1, "Low DQ lane driven during masked read");
-                if (read_dq_mask[1] && sdram_dq[15:8] !== 8'bz)
-                    $fatal(1, "High DQ lane driven during masked read");
-            end
             if (command == CMD_REFRESH && stress) begin
                 refresh_under_load = refresh_under_load + 1;
                 if (cpu_read_live || cpu_mem_req)
@@ -227,13 +232,12 @@ module mem_subsystem_tb #(
                 if (cycle - cpu_read_start > MAX_CPU_READ_CYCLES)
                     $fatal(1, "CPU read took %0d clocks, budget %0d",
                         cycle - cpu_read_start, MAX_CPU_READ_CYCLES);
-                if (stress) begin
+                if (stress)
                     latency_reads = latency_reads + 1;
-                    if (cycle - cpu_read_start > max_cpu_req_latency)
-                        max_cpu_req_latency = cycle - cpu_read_start;
-                    if (cycle - cpu_read_accept > max_cpu_accept_latency)
-                        max_cpu_accept_latency = cycle - cpu_read_accept;
-                end
+                if (cycle - cpu_read_start > max_cpu_req_latency)
+                    max_cpu_req_latency = cycle - cpu_read_start;
+                if (cycle - cpu_read_accept > max_cpu_accept_latency)
+                    max_cpu_accept_latency = cycle - cpu_read_accept;
                 cpu_read_live = 0;
                 cpu_read_issued = 0;
                 responses = responses + 1;
@@ -271,8 +275,6 @@ module mem_subsystem_tb #(
                         expected_screen[screen_write_index] = queue_data[slot];
                 end else begin
                     read_commands = read_commands + 1;
-                    read_dq_sample_cycle = cycle + 4;
-                    read_dq_mask = expected_mask;
                     if (queue_loader[slot])
                         ld_read_issued = 1;
                     else
@@ -534,21 +536,36 @@ module mem_subsystem_tb #(
         #1 rst_n = 0;
         repeat (4) @(negedge clk_sys);
         #1 rst_n = 1;
-        // Both clients wait through initialization. The loader must see
-        // the CPU write if both are accepted on the first available edge.
+        // Both clients wait through initialization and write distinct lanes.
         fork
             cpu_transfer(1, 22'h030000, 8'ha6);
-            loader_transfer(0, 22'h030000, 0);
+            loader_transfer(1, 22'h030001, 8'h3c);
         join
         if (both_accepted != 1)
             $fatal(1, "Missing simultaneous CPU/loader acceptance at initialization");
 
-        // An older loader write must be visible to an overlapping CPU read.
+        // First READ after idle, then successive READs with distinct results.
+        // Each response is checked by case inequality, including X and Z,
+        // against the reference bytes. A previous result cannot match.
         drain;
-        loader_transfer(1, 22'h030001, 8'h3c);
-        cpu_transfer(0, 22'h030001, 0);
+        repeat (8) @(negedge clk_sys);
         cpu_transfer(0, 22'h030000, 0);
-        cpu_transfer(1, 22'h030000, 8'hf1);
+        cpu_transfer(0, 22'h030001, 0);
+        loader_transfer(0, 22'h030000, 0);
+        loader_transfer(0, 22'h030001, 0);
+
+        // A simultaneous loader read must see the older CPU write.
+        drain;
+        fork
+            cpu_transfer(1, 22'h030000, 8'hf1);
+            loader_transfer(0, 22'h030000, 0);
+        join
+        if (both_accepted != 2)
+            $fatal(1, "Missing simultaneous CPU write / loader read");
+
+        // An older loader write must be visible to an overlapping CPU read.
+        loader_transfer(1, 22'h030001, 8'h52);
+        cpu_transfer(0, 22'h030001, 0);
         loader_transfer(0, 22'h030001, 0);
 
         // Continuous CPU writes use consecutive acceptance edges. A loader
@@ -658,7 +675,7 @@ module mem_subsystem_tb #(
             SMALL_SDRAM ? 4 : 32, COL_BITS, writes, responses, model.refresh_count);
         $display("Maximum refresh gap: %0d ps. Refreshes with CPU waiting during load: %0d",
             model.max_refresh_ps, refresh_with_cpu_waiting);
-        $display("Worst CPU read latency under load and refresh alignment: %0d clocks from request, %0d from acceptance",
+        $display("Worst CPU read latency: %0d clocks from request, %0d from acceptance",
             max_cpu_req_latency, max_cpu_accept_latency);
         $finish;
     end

@@ -13,14 +13,13 @@ set sdram_dq_ports [get_ports {sdram_dq[*]}]
 set sdram_write_ports [get_ports {sdram_a[*] sdram_ba[*] sdram_dq[*] sdram_dqm[*]
                                 sdram_cs_n sdram_ras_n sdram_cas_n sdram_we_n sdram_cke}]
 
-# Micron 256Mb SDR SDRAM datasheet 256Mb_sdr.pdf, Rev. N, -75/-7E at CL3.
+# Micron 256Mb SDR SDRAM datasheet 256Mb_sdr.pdf, Rev. W, -75/-7E at CL3.
 # Address, command, CKE, DQM and write DQ use 1.5 ns setup and 0.8 ns hold.
-# Read DQ uses 5.4 ns tAC max and 3.0 ns tOH min at the datasheet load.
-# The separate no-load estimates in the datasheet are tAC 4.6 and tOH 1.8 ns.
+# Use the 5.4 ns loaded tAC maximum and 1.8 ns no-load tOHn minimum.
 set sdram_setup 1.5
 set sdram_hold 0.8
 set sdram_tac 5.4
-set sdram_toh 3.0
+set sdram_toh 1.8
 
 # PCB flight-time placeholders in ns. Replace with routed bounds for signoff.
 set pcb_clk_min 0.0
@@ -38,9 +37,10 @@ set_input_delay -clock $sdram_clock -reference_pin $sdram_clock_pad \
 set_input_delay -clock $sdram_clock -reference_pin $sdram_clock_pad \
     -min [expr {$sdram_toh + $pcb_clk_min + $pcb_data_min}] $sdram_dq_ports
 
-# With e0 leading c0, a READ launched at c0[0] is registered at e0[1].
-# Micron CL3 (Fig. 19) launches data at e0[3] and holds through e0[4] + tOH.
-# The current controller captures at c0[5]. Time setup from e0[3] and hold
-# from e0[4] so the report exposes a capture beyond the valid window.
-set_multicycle_path -from $sdram_dq_ports -to $fabric_clock -setup -end 3
-set_multicycle_path -from $sdram_dq_ports -to $fabric_clock -hold -end 0
+# A READ launched at c0[0] registers at e0[1]. CL3 launches DQ at e0[3].
+# The c0 falling edge between e0[3] and e0[4] uses e0[3] for setup and
+# e0[4] for hold with the default edge relationships. The captured data
+# crosses to the next c0 rising edge on a timed half-cycle path.
+# At the reported 2.909 ns e0 lead and 11.640 ns period, these read
+# setup and hold edge separations are 8.729 ns and 2.911 ns, before
+# applying the input delays, clock insertion delays and uncertainty.
