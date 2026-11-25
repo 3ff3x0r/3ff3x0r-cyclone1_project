@@ -1,5 +1,6 @@
 module core_subsystem (
     input  wire        clk_sys,
+    input  wire        clk_cpu,
     input  wire        rst_n,
     input  wire        cpu_reset_n,
     input  wire        guest_reset_n,
@@ -88,9 +89,15 @@ module core_subsystem (
     reg [7:0] cpu_DI;
     wire m1_n, mreq_n, iorq_n, rd_n, wr_n, rfsh_n;
     wire cpu_ce_p, cpu_ce_n, ula_int_n;
-    wire memory_cycle = !mreq_n && rfsh_n;
-    wire mem_read = memory_cycle && !rd_n;
-    wire mem_write = memory_cycle && !wr_n;
+    wire phase_ready, phase_pending;
+    wire read_on_neg;
+    reg confirmed_read;
+    wire strobed_memory = !mreq_n && rfsh_n;
+    wire strobed_read = strobed_memory && !rd_n;
+    wire guest_read_before_strobes = guest_on && confirmed_read;
+    wire memory_cycle = strobed_memory || guest_read_before_strobes;
+    wire mem_read = strobed_read || guest_read_before_strobes;
+    wire mem_write = strobed_memory && !wr_n;
     wire io_cycle = !iorq_n && m1_n && (!rd_n || !wr_n);
     wire bus_busy = memory_cycle || io_cycle || !iorq_n;
     wire access_cycle = mem_read || mem_write || io_cycle;
@@ -125,8 +132,20 @@ module core_subsystem (
         .paging_locked(paging_locked), .disk_motor(disk_motor), .beta_active(beta_active)
     );
 
-    // A request is visible on the first fabric edge after T80pa asserts
-    // RD or WR. The phase controls keep the CPU payload stable until take.
+    // The previous positive phase published the address and the T80pa
+    // T1 read decode. Begin the guest read only on acceptance of the
+    // negative phase that asserts those strobes. Keep the access live
+    // across publication so access_taken covers both views of the read.
+    always @(posedge clk_sys or negedge rst_n) begin
+        if (!rst_n)
+            confirmed_read <= 1'b0;
+        else if (!guest_on || strobed_read)
+            confirmed_read <= 1'b0;
+        else if (cpu_ce_n && read_on_neg && rfsh_n && wr_n && !access_cycle)
+            confirmed_read <= 1'b1;
+    end
+
+    // Writes and boot accesses continue to use the published bus strobes.
     reg access_taken;
     reg read_pending;
     reg read_done;
@@ -187,9 +206,11 @@ module core_subsystem (
     wire pos_phase = ce_cpu && !cpu_high;
     wire neg_phase = ce_ula && !ce_cpu && cpu_high;
     wire hold_idle = !bus_busy && (cpu_quiesce || (!boot_overlay && (!cfg_valid || !mem_ready)));
-    wire cpu_clock_run = cpu_on && !hold_idle;
-    assign cpu_quiesced = cpu_quiesce && (!cpu_on || !bus_busy) && !read_pending;
-    wire boot_wait = boot_access && !access_taken && !boot_take;
+    wire cpu_clock_run = phase_ready && !hold_idle;
+    assign cpu_quiesced = cpu_quiesce && (!cpu_on || !bus_busy) &&
+                          !read_pending && !phase_pending;
+    // Complete the fabric handshake before releasing the CPU phase.
+    wire boot_wait = boot_access && !access_taken;
 
     // For memory, the address/strobe identify T1 before the next positive
     // edge. For I/O, IORQ starts at T2 and the saved T1 slot is still available.
@@ -288,9 +309,7 @@ module core_subsystem (
     always @* begin
         cpu_DI = 8'hff;
         if (boot_access && (mem_read || (io_cycle && wr_n))) begin
-            if (boot_take)
-                cpu_DI = boot_bus_rdata;
-            else if (read_done)
+            if (read_done)
                 cpu_DI = read_data;
         end else if (guest_on) begin
             if (mem_read) begin
@@ -306,11 +325,13 @@ module core_subsystem (
         end
     end
 
-    spectrum_cpu cpu (
-        .clk_sys(clk_sys), .reset_n(cpu_on), .ce_p(cpu_ce_p), .ce_n(cpu_ce_n),
+    cpu_clock_bridge cpu_bridge (
+        .clk_sys(clk_sys), .clk_cpu(clk_cpu), .rst_n(rst_n), .run(cpu_on),
+        .ce_p(cpu_ce_p), .ce_n(cpu_ce_n),
+        .phase_ready(phase_ready), .phase_pending(phase_pending),
         .int_n(boot_overlay || ula_int_n), .m1_n(m1_n), .mreq_n(mreq_n),
         .iorq_n(iorq_n), .rd_n(rd_n), .wr_n(wr_n), .rfsh_n(rfsh_n), .addr(addr),
-        .data_in(cpu_DI), .data_out(cpu_DO)
+        .data_in(cpu_DI), .data_out(cpu_DO), .read_on_neg(read_on_neg)
     );
 
     wire [2:0] border;

@@ -51,7 +51,7 @@ run_iverilog() {
     # repository's standard Icarus simulation mode.
     iverilog -g2001 -Wall -Wno-timescale -s "$top" -o "$build/$top.2001.vvp" "$fixture" "$@"
     iverilog -g2012 -Wall -Wno-timescale -s "$top" -o "$build/$top.vvp" "$fixture" "$@"
-    vvp "$build/$top.vvp" | tee "$build/$top.log"
+    vvp "$build/$top.vvp" "+cpu_align=${CPU_ALIGNMENT:-0}" | tee "$build/$top.log"
     ! rg -q '^FAIL' "$build/$top.log" && rg -q '^PASS' "$build/$top.log"
 }
 
@@ -64,6 +64,13 @@ if (( $# == 1 )); then
     core=$(realpath -- "$1/rtl/core")
     donor=$(realpath -- "$1/vendor/ZX_Spectrum-128K_MIST/T80")
     core_rtl=("$core"/{core_subsystem,spectrum_io,spectrum_mmu,spectrum_ula}.v)
+    if [[ -f $core/cpu_clock_bridge.v ]]; then
+        core_rtl+=("$core/cpu_clock_bridge.v" rtl/core/tb/cpu_clock_model.v -DREGISTERED_CPU_CLOCK)
+    fi
+    t80pa="$core/T80pa.vhd"
+    if [[ ! -f $t80pa ]]; then
+        t80pa="$donor/T80pa.vhd"
+    fi
     ghdl_opts=(--std=93 -fsynopsys -fexplicit --syn-binding)
 
     check_cpu() {
@@ -72,7 +79,7 @@ if (( $# == 1 )); then
         (
             cd -- "$work"
             ghdl -a "${ghdl_opts[@]}" -Werror -Wno-hide \
-                "$donor"/T80_{Pack,ALU,MCode,Reg}.vhd "$cpu_source" "$donor/T80pa.vhd"
+                "$donor"/T80_{Pack,ALU,MCode,Reg}.vhd "$cpu_source" "$t80pa"
             ghdl -a --std=93 -Werror "$core/spectrum_cpu.vhd" "$core/tb/spectrum_cpu_tb.vhd"
             ghdl -e "${ghdl_opts[@]}" -Werror spectrum_cpu_tb
             ghdl -r "${ghdl_opts[@]}" spectrum_cpu_tb \
@@ -83,11 +90,15 @@ if (( $# == 1 )); then
     }
 
     check_cpu "$build/native" "$donor/T80.vhd"
-    # Use C's documented equal-width mask workaround for GHDL synthesis.
-    sed 's/ioq and x"7"/ioq and "000000111"/' "$donor/T80.vhd" > "$build/T80.vhd"
-    check_cpu "$build/synth" "$build/T80.vhd"
+    cpu_source="$core/T80.vhd"
+    if [[ ! -f $cpu_source ]]; then
+        # Older Ticket C worktrees need an equal-width mask for GHDL synthesis.
+        cpu_source="$build/T80.vhd"
+        sed 's/ioq and x"7"/ioq and "000000111"/' "$donor/T80.vhd" > "$cpu_source"
+    fi
+    check_cpu "$build/synth" "$cpu_source"
     diff -u "$build/native/trace.log" "$build/synth/trace.log"
-    printf 'PASS original and scratch T80 VHDL-93 bus traces match\n'
+    printf 'PASS synthesis source and pinned T80 VHDL-93 bus traces match\n'
     (
         cd -- "$build/synth"
         ghdl synth "${ghdl_opts[@]}" -Werror --latches --out=verilog spectrum_cpu

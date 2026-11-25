@@ -8,7 +8,7 @@ module screen_mirror (
     input  wire        screen_rd_bank7,
     input  wire [12:0] screen_rd_offset,
     output reg         screen_rd_valid,
-    output wire [7:0]  screen_rd_data
+    output reg  [7:0]  screen_rd_data
 );
     localparam [12:0] SCREEN_BYTES = 13'd6912;
 
@@ -29,15 +29,18 @@ module screen_mirror (
     wire forward_write = mirror_read && mirror_write
         && (screen_rd_bank7 == write_bank7)
         && ({1'b0, screen_rd_offset} == write_addr[13:0]);
+    reg       read_sampled;
     reg       forwarded;
     reg [7:0] forwarded_data;
     always @(posedge clk_sys or negedge rst_n) begin
         if (!rst_n) begin
+            read_sampled <= 1'b0;
             screen_rd_valid <= 1'b0;
             forwarded <= 1'b0;
             forwarded_data <= 8'b0;
         end else begin
-            screen_rd_valid <= mirror_read;
+            read_sampled <= mirror_read;
+            screen_rd_valid <= read_sampled;
             forwarded <= forward_write;
             if (forward_write)
                 forwarded_data <= write_data;
@@ -71,5 +74,8 @@ module screen_mirror (
         end
     endgenerate
 
-    assign screen_rd_data = forwarded ? forwarded_data : block_data[read_block*8 +: 8];
+    // Sample the selected byte after the M4K mux. Valid and the collision
+    // bypass refer to the same request, including back-to-back reads.
+    always @(posedge clk_sys)
+        screen_rd_data <= forwarded ? forwarded_data : block_data[read_block*8 +: 8];
 endmodule

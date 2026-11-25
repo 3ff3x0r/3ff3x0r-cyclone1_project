@@ -67,11 +67,11 @@ and [TK90X FE measurements](https://cantinhotk90x.blogspot.com/2012/11/rom-e-por
 
 ## Build and checks
 
-For Quartus, analyze `T80_Pack.vhd`, `T80_ALU.vhd`, `T80_MCode.vhd`,
-`T80_Reg.vhd`, `T80.vhd` and `T80pa.vhd` from the pinned
-`vendor/ZX_Spectrum-128K_MIST/T80/` tree in that order. Add
-`spectrum_cpu.vhd` and the four Verilog files in this directory to the
-same design. The [vendor inventory](../../docs/VENDOR_INVENTORY.md)
+For Quartus, analyze `T80_Pack.vhd`, `T80_ALU.vhd`, `T80_MCode.vhd` and
+`T80_Reg.vhd` from the pinned `vendor/ZX_Spectrum-128K_MIST/T80/` tree.
+Then analyze this directory's adapted `T80.vhd`, the donor's `T80pa.vhd`
+and this directory's `spectrum_cpu.vhd` in that order. Add the four Verilog
+files in this directory to the same design. The [vendor inventory](../../docs/VENDOR_INVENTORY.md)
 records the revisions and T80 redistribution terms.
 
 Run `rtl/core/tb/run_checks.sh` from the worktree. It checks the
@@ -83,11 +83,10 @@ clock enables. All fixtures are ROM-free. The Yosys gate checks for zero
 combinational loops, latch cells and inferred RAMs. Build products and logs
 go to a temporary directory.
 
-The Linux translation widens one legacy block-I/O mask in a temporary
-T80 copy for GHDL synthesis. The native smoke program produces identical
-bus traces with both copies. Its instruction coverage excludes the
-block-I/O flag calculation itself. The Quartus source list references the
-original vendor files.
+The local translation uses the same adapted T80 as Quartus. The native
+smoke program compares its bus trace with the pinned donor's trace.
+`block_io_parity_tb` compares the production parity function against the
+donor's masked sum across all 32,768 relevant binary input combinations.
 
 Full-system qualification still includes the Quartus 11.0 SP1 fit and STA,
 hardware checks for CPU/video and EAR phase, instruction-internal

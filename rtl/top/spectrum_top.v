@@ -4,6 +4,7 @@ module spectrum_top #(
     parameter [14:0] ROM_SLOT_BYTES = 15'd16384
 ) (
     input  wire        clk_sys,
+    input  wire        clk_cpu,
     input  wire        rst_n,
     input  wire        clk_vga,
     input  wire        rst_vga_n,
@@ -269,7 +270,7 @@ module spectrum_top #(
     );
 
     core_subsystem core (
-        .clk_sys(clk_sys), .rst_n(rst_n),
+        .clk_sys(clk_sys), .clk_cpu(clk_cpu), .rst_n(rst_n),
         .cpu_reset_n(cpu_reset_n), .guest_reset_n(guest_reset_n),
         .cpu_quiesce(cpu_quiesce), .cpu_quiesced(cpu_quiesced),
         .boot_overlay(boot_overlay), .cfg_valid(cfg_valid),

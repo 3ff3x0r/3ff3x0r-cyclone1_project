@@ -137,8 +137,9 @@ module mem_subsystem_tb #(
     reg ld_read_live = 0, ld_read_issued = 0;
     reg [7:0] cpu_expected, ld_expected;
     reg [1:0] expected_mask;
-    reg [7:0] expected_screen_data;
-    reg expected_screen_valid;
+    reg [7:0] sampled_screen_data, expected_screen_data;
+    reg sampled_screen_valid = 0, expected_screen_valid;
+    integer expected_screen_index;
     reg stress = 0;
 
     function integer screen_index;
@@ -208,6 +209,7 @@ module mem_subsystem_tb #(
     always @(posedge clk_sys) begin
         cycle = cycle + 1;
         if (!rst_n) begin
+            sampled_screen_valid = 0;
             if ({mem_ready, mem_idle, cpu_mem_accept, ld_mem_accept,
                 cpu_mem_rvalid, ld_mem_rvalid, screen_rd_valid} !== 7'b0)
                 $fatal(1, "Interface must be inactive during reset");
@@ -305,10 +307,13 @@ module mem_subsystem_tb #(
             if (last_cpu_accept == cycle && last_loader_accept == cycle)
                 both_accepted = both_accepted + 1;
 
-            expected_screen_valid = screen_rd_req && screen_rd_offset < SCREEN_BYTES;
-            if (expected_screen_valid) begin
+            expected_screen_valid = sampled_screen_valid;
+            expected_screen_data = sampled_screen_data;
+            expected_screen_index = screen_read_index;
+            sampled_screen_valid = screen_rd_req && screen_rd_offset < SCREEN_BYTES;
+            if (sampled_screen_valid) begin
                 screen_read_index = (screen_rd_bank7 ? SCREEN_BYTES : 0) + int'(screen_rd_offset);
-                expected_screen_data = expected_screen[screen_read_index];
+                sampled_screen_data = expected_screen[screen_read_index];
                 if (screen_read_index == screen_write_index) begin
                     if (screen_rd_bank7)
                         forward_bank7 = forward_bank7 + 1;
@@ -322,9 +327,9 @@ module mem_subsystem_tb #(
             #1;
             if (screen_rd_valid !== expected_screen_valid ||
                 (expected_screen_valid && screen_rd_data !== expected_screen_data))
-                $fatal(1, "Screen bank %0d offset %04x returned %h, expected %h at cycle %0d",
-                    screen_rd_bank7 ? 7 : 5, screen_rd_offset, screen_rd_data,
-                    expected_screen_data, cycle);
+                $fatal(1, "Screen index %0d returned valid/data %b/%h, expected %b/%h at cycle %0d",
+                    expected_screen_index, screen_rd_valid, screen_rd_data,
+                    expected_screen_valid, expected_screen_data, cycle);
         end
     end
 

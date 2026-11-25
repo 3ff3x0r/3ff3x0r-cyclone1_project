@@ -23,7 +23,7 @@ module core_input_audio_tb;
     reg cpu_mem_rvalid = 0;
     reg [7:0] cpu_mem_rdata = 0;
     wire screen_rd_req;
-    reg screen_rd_valid = 0;
+    reg screen_read_sampled = 0, screen_rd_valid = 0;
 
     video_clock_enables clocks (
         .clk_sys(clk_sys), .rst_n(rst_n), .cfg_timing_id(3'd1),
@@ -44,7 +44,14 @@ module core_input_audio_tb;
         .ear_idle_bit(1'b1), .tap_ear_valid(tap_ear_valid), .tap_ear_bit(1'b0),
         .ear_bit(ear_bit), .audio_l(audio_l), .audio_r(audio_r)
     );
+`ifdef REGISTERED_CPU_CLOCK
+    wire clk_cpu;
+    cpu_clock_model #(.FABRIC_PERIOD_PS(11640)) cpu_clock (clk_cpu);
+`endif
     core_subsystem core (
+`ifdef REGISTERED_CPU_CLOCK
+        .clk_cpu(clk_cpu),
+`endif
         .clk_sys(clk_sys), .rst_n(rst_n), .cpu_reset_n(guest_reset_n),
         .guest_reset_n(guest_reset_n), .cpu_quiesce(1'b0), .cpu_quiesced(),
         .boot_overlay(1'b0), .cfg_valid(1'b1), .cfg_timing_id(3'd1), .cfg_paging_id(3'd2),
@@ -70,7 +77,8 @@ module core_input_audio_tb;
     reg [7:0] signature [0:7];
     integer writes = 0, ay_cycles = 0, cpu_ticks = 0, last_psg_cpu_tick = 0;
     always @(posedge clk_sys) begin
-        screen_rd_valid <= screen_rd_req;
+        screen_read_sampled <= screen_rd_req;
+        screen_rd_valid <= screen_read_sampled;
         cpu_mem_rvalid <= cpu_mem_req && !cpu_mem_we;
         if (cpu_mem_req && !cpu_mem_we)
             cpu_mem_rdata <= (cpu_mem_addr >= 22'h020000 && cpu_mem_addr < 22'h020080) ?

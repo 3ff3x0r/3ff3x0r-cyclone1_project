@@ -8,9 +8,10 @@ module sd_spi_reader_tb;
     wire [7:0] rx_data;
     wire [3:0] error;
     reg miso = 1;
+    localparam [23:0] TOKEN_WAIT_BYTES = 24'd9, CLIENT_WAIT_CYCLES = 24'd25;
     sd_spi_reader #(.INIT_HALF_CYCLES(16'd3), .DATA_HALF_CYCLES(16'd2),
-        .INIT_RETRIES(13'd3), .TOKEN_WAIT_BYTES(24'd9),
-        .CLIENT_WAIT_CYCLES(24'd25)) dut (
+        .INIT_RETRIES(13'd3), .TOKEN_WAIT_BYTES(TOKEN_WAIT_BYTES),
+        .CLIENT_WAIT_CYCLES(CLIENT_WAIT_CYCLES)) dut (
         .clk_sys(clk), .rst_n(reset_n), .sd_blk_req(req),
         .sd_blk_ready(ready), .sd_blk_lba(lba), .sd_blk_we(we),
         .sd_blk_tx_valid(1'b0), .sd_blk_tx_data(8'd0), .sd_blk_tx_ready(tx_ready),
@@ -123,7 +124,7 @@ module sd_spi_reader_tb;
         input [3:0] expected_error;
         input integer expected_bytes;
         input integer stall_first;
-        integer received, stall_cycles;
+        integer received, stall_cycles, blocked_cycles;
         reg stalled;
         reg [7:0] stalled_byte;
         begin
@@ -138,6 +139,7 @@ module sd_spi_reader_tb;
             req = 0;
             quiesce = 1;
             received = 0;
+            blocked_cycles = 0;
             stall_cycles = stall_first;
             stalled = 0;
             while (!done) begin
@@ -151,6 +153,7 @@ module sd_spi_reader_tb;
                 rx_ready = stall_cycles == 0;
                 @(posedge clk);
                 if (ready || tx_ready) $fatal(1, "Unexpected ready");
+                if (rx_valid && !rx_ready) blocked_cycles = blocked_cycles + 1;
                 if (rx_valid && rx_ready) begin
                     if (rx_data !== payload(received)) $fatal(1, "Bad byte at %0d", received);
                     received = received + 1;
@@ -159,6 +162,10 @@ module sd_spi_reader_tb;
             end
             if (error !== expected_error || received != expected_bytes || !cs || sclk)
                 $fatal(1, "Completion error=%0d bytes=%0d", error, received);
+            if (expected_error == 4 && no_token && bytes != 6 + 2 + TOKEN_WAIT_BYTES)
+                $fatal(1, "Token timeout after %0d idle bytes", bytes - 8);
+            if (expected_error == 4 && stall_first != 0 && blocked_cycles != CLIENT_WAIT_CYCLES)
+                $fatal(1, "Client timeout after %0d blocked clocks", blocked_cycles);
             quiesce = 0;
             @(negedge clk);
         end
@@ -168,7 +175,8 @@ module sd_spi_reader_tb;
         repeat (4) @(negedge clk);
         reset_n = 1;
         read_block(32'h00123456, 0, 0, 512, 5);
-        read_block(32'd123, 0, 0, 512, 0);
+        // Ready on the terminal wait edge still accepts the byte.
+        read_block(32'd123, 0, 0, 512, CLIENT_WAIT_CYCLES);
         if (starts != 1) $fatal(1, "Second read must reuse initialization");
         read_block(32'd0, 1, 3, 0, 0);
         bad_crc = 1;

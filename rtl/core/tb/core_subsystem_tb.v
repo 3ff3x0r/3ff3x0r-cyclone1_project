@@ -18,15 +18,18 @@ module core_subsystem_tb;
     wire cpu_mem_req, cpu_mem_we;
     wire [21:0] cpu_mem_addr;
     wire [7:0] cpu_mem_wdata;
-    reg cpu_mem_rvalid = 0;
-    reg [7:0] cpu_mem_rdata;
+    reg model_rvalid = 0;
+    reg [7:0] model_rdata;
+    wire cpu_mem_rvalid;
+    wire [7:0] cpu_mem_rdata;
     wire cpu_mem_deadline_miss;
     wire boot_bus_req, boot_bus_io, boot_bus_we;
     wire [15:0] boot_bus_addr;
     wire [7:0] boot_bus_wdata;
     wire screen_rd_req, screen_rd_bank7, ula_px_ce, ula_hs_n, ula_vs_n, ula_blank;
     wire [12:0] screen_rd_offset;
-    reg screen_rd_valid = 0;
+    reg screen_read_sampled = 0, screen_rd_valid = 0;
+    reg [7:0] screen_data_sampled;
     reg [7:0] screen_rd_data = 0;
     wire [3:0] ula_color;
     wire [9:0] ula_x;
@@ -61,13 +64,19 @@ module core_subsystem_tb;
                           !(block_writes && cpu_mem_we);
     integer pending_addr;
     reg outstanding = 0;
+    reg sample_edge_response = 0;
+    wire edge_reply = sample_edge_response && outstanding && dut.mem_read_due;
+    assign cpu_mem_rvalid = model_rvalid || edge_reply;
+    assign cpu_mem_rdata = edge_reply ? memory[location(pending_addr)] : model_rdata;
     reg waiting = 0;
     reg [30:0] held_mem;
     reg boot_waiting = 0;
     reg [25:0] held_boot;
 
+    wire clk_cpu;
+    cpu_clock_model #(.FABRIC_PERIOD_PS(10000)) cpu_clock (clk_cpu);
     core_subsystem dut (
-        .clk_sys(clk_sys), .rst_n(rst_n), .cpu_reset_n(cpu_reset_n),
+        .clk_sys(clk_sys), .clk_cpu(clk_cpu), .rst_n(rst_n), .cpu_reset_n(cpu_reset_n),
         .guest_reset_n(guest_reset_n), .cpu_quiesce(cpu_quiesce), .cpu_quiesced(cpu_quiesced),
         .boot_overlay(boot_overlay), .cfg_valid(cfg_valid), .cfg_timing_id(cfg_timing_id),
         .cfg_paging_id(cfg_paging_id), .cfg_rom_valid_mask(cfg_rom_valid_mask),
@@ -91,9 +100,38 @@ module core_subsystem_tb;
         .disk_rdata(8'h73), .disk_motor(disk_motor)
     );
 
+    integer accepted_phases = 0, delivered_phases = 0, delivered_resets = 0;
+    reg [10:0] phase_payload;
+    always @(posedge clk_sys) begin
+        if (rst_n && cpu_quiesced && (dut.phase_pending || dut.read_pending))
+            $fatal(1, "FAIL quiesced before the phase or RAM reply drained");
+        if (rst_n && (dut.cpu_ce_p || dut.cpu_ce_n)) begin
+            if (accepted_phases != delivered_phases)
+                $fatal(1, "FAIL second phase accepted with a phase pending");
+            phase_payload = {dut.cpu_ce_p, dut.cpu_ce_n,
+                             boot_overlay || dut.ula_int_n, dut.cpu_DI};
+            accepted_phases = accepted_phases + 1;
+        end
+    end
+    always @(posedge clk_cpu) begin
+        if (rst_n && (dut.cpu_bridge.cpu_ce_p || dut.cpu_bridge.cpu_ce_n)) begin
+            if (accepted_phases != delivered_phases + 1 ||
+                {dut.cpu_bridge.cpu_ce_p, dut.cpu_bridge.cpu_ce_n,
+                 dut.cpu_bridge.cpu_int_n, dut.cpu_bridge.cpu_data_in} !== phase_payload)
+                $fatal(1, "FAIL CPU phase was duplicated, reordered or received the wrong byte");
+            delivered_phases = delivered_phases + 1;
+        end
+        if (rst_n && dut.cpu_bridge.stage == 2'd1 && !dut.cpu_bridge.cpu_reset_n)
+            delivered_resets = delivered_resets + 1;
+    end
+
     integer writes = 0, boot_writes = 0, boot_io = 0, reads = 0;
     integer ay_ops = 0, disk_ops = 0;
     integer valid_at_sample = 0;
+    integer read_accept_tick, late_reads = 0, late_writes = 0;
+    reg trace_deadline = 0;
+    reg check_discarded_reply = 0;
+    initial trace_deadline = $test$plusargs("trace_deadline");
     reg check_io = 0, previous_io = 0;
     integer early_x, last_x, slot_x, io_expected, io_waits, io_checks = 0, io_delayed = 0;
     integer slot;
@@ -153,13 +191,15 @@ module core_subsystem_tb;
 
     reg first_guest_fetch = 0;
     always @(posedge clk_sys) begin
-        screen_rd_valid <= screen_rd_req;
+        screen_read_sampled <= screen_rd_req;
+        screen_rd_valid <= screen_read_sampled;
+        screen_rd_data <= screen_data_sampled;
         if (screen_rd_req) begin
             if (screen_rd_offset >= 6912 || (boot_overlay && screen_rd_bank7)) begin
                 $display("FAIL Screen mirror address or boot ownership");
                 $finish;
             end
-            screen_rd_data <= memory[location((screen_rd_bank7 ? 'h1c000 : 'h14000) + screen_rd_offset)];
+            screen_data_sampled <= memory[location((screen_rd_bank7 ? 'h1c000 : 'h14000) + screen_rd_offset)];
         end
         if (waiting && (!cpu_mem_req || held_mem !== {cpu_mem_addr, cpu_mem_we, cpu_mem_wdata})) begin
             $display("FAIL Guest request changed under backpressure");
@@ -234,8 +274,21 @@ module core_subsystem_tb;
             $finish;
         end
 
-        cpu_mem_rvalid <= 0;
+        if (dut.late_read && !dut.mem_delay)
+            late_reads = late_reads + 1;
+        if (dut.late_write)
+            late_writes = late_writes + 1;
+        if (trace_deadline && (latency == 34 || sample_edge_response) && dut.mem_read_due)
+            $display("DEADLINE addr=%h accepted=%0d sample=%0d elapsed=%0d valid=%b late=%b",
+                     dut.addr, read_accept_tick, tick, tick - read_accept_tick,
+                     cpu_mem_rvalid, dut.late_read);
+        model_rvalid <= 0;
         if (cpu_mem_rvalid) begin
+            if (check_discarded_reply) begin
+                if (dut.live_response || dut.read_done || dut.access_taken)
+                    $fatal(1, "FAIL old SDRAM reply escaped warm reset");
+                check_discarded_reply = 0;
+            end
             if (dut.mem_read_due && dut.cpu_ce_p)
                 valid_at_sample = valid_at_sample + 1;
             if (!outstanding) begin
@@ -247,8 +300,8 @@ module core_subsystem_tb;
         if (read_left != 0) begin
             read_left <= read_left - 1;
             if (read_left == 1) begin
-                cpu_mem_rvalid <= 1;
-                cpu_mem_rdata <= memory[location(pending_addr)];
+                model_rvalid <= 1;
+                model_rdata <= memory[location(pending_addr)];
             end
         end
         if (cpu_mem_req && cpu_mem_accept) begin
@@ -273,9 +326,12 @@ module core_subsystem_tb;
             end else begin
                 reads = reads + 1;
                 outstanding = 1;
-                if (latency == 0) begin
-                    cpu_mem_rvalid <= 1;
-                    cpu_mem_rdata <= memory[location(cpu_mem_addr)];
+                read_accept_tick = tick;
+                if (sample_edge_response) begin
+                    pending_addr <= cpu_mem_addr;
+                end else if (latency == 0) begin
+                    model_rvalid <= 1;
+                    model_rdata <= memory[location(cpu_mem_addr)];
                 end else begin
                     read_left <= latency;
                     pending_addr <= cpu_mem_addr;
@@ -283,6 +339,19 @@ module core_subsystem_tb;
             end
         end
     end
+
+    task pulse_cpu_reset;
+        integer resets_before;
+        begin
+            resets_before = delivered_resets;
+            cpu_reset_n = 0;
+            @(negedge clk_sys);
+            cpu_reset_n = 1;
+            first_guest_fetch = 1;
+            wait (delivered_resets == resets_before + 1);
+            wait (!dut.phase_pending);
+        end
+    endtask
 
     integer pc;
     task emit;
@@ -553,15 +622,21 @@ module core_subsystem_tb;
         emit('hdd); emit('h21); emit(0); emit('h40); // LD IX,4000
         emit('hdd); emit('hcb); emit(0); emit('h06); // RLC (IX+0)
         load('h4000); store('h7f08); emit('h76);
-        latency = 34;
+        // The original fixed service time remains the default regression.
+        // This alternate check drives valid at the logical edge to isolate
+        // delivery across the clock bridge from the service budget.
+        sample_edge_response = $test$plusargs("deadline_relative");
+        latency = sample_edge_response ? 0 : 34;
         run_guest;
         wait (memory[location('h17f08)] == 'h84);
         if (cpu_mem_deadline_miss || valid_at_sample < 10) begin
-            $display("FAIL Exact sample-edge response was not bypassed");
+            $display("FAIL Exact sample-edge response: samples=%0d late_read_slots=%0d miss=%b",
+                     valid_at_sample, late_reads, cpu_mem_deadline_miss);
             $finish;
         end
 
         reset_guest(0, 1, 1);
+        sample_edge_response = 0;
         pc = 'h20000;
         ld_a('hdb); store('h7f05); emit('h76);
         // Intentionally miss the fetch deadline. The CPU must retry
@@ -578,8 +653,52 @@ module core_subsystem_tb;
             $finish;
         end
 
+        reset_guest(0, 1, 1);
+        latency = 17;
+        pc = 'h20000;
+        emit('h76);
+        run_guest;
+
+        // Quiesce after accepting a phase, before its bus is published.
+        wait (dut.phase_pending);
+        @(negedge clk_sys);
+        cpu_quiesce = 1;
+        wait (cpu_quiesced);
+        @(negedge clk_sys);
+        cpu_quiesce = 0;
+
+        // Quiesce with an accepted SDRAM read awaiting its response.
+        wait (dut.read_pending);
+        @(negedge clk_sys);
+        cpu_quiesce = 1;
+        wait (cpu_quiesced);
+        @(negedge clk_sys);
+        cpu_quiesce = 0;
+
+        // A short warm reset must survive an in-flight CPU phase.
+        wait (dut.phase_pending);
+        @(negedge clk_sys);
+        pulse_cpu_reset;
+
+        // An old read response must drain without completing the restarted
+        // CPU's access. The first request after reset still fetches ROM 0.
+        wait (dut.read_pending);
+        @(negedge clk_sys);
+        check_discarded_reply = 1;
+        pulse_cpu_reset;
+        wait (!dut.read_pending);
+        wait (!first_guest_fetch);
+        @(negedge clk_sys);
+        cpu_quiesce = 1;
+        wait (cpu_quiesced);
+        if (accepted_phases != delivered_phases || check_discarded_reply)
+            $fatal(1, "FAIL phase or old reply lost during reset or quiesce");
+        $display("PASS warm reset and quiesce with pending phase and RAM reply, phases=%0d", delivered_phases);
+
         $display("PASS boot, paging, ports, I/O contention and memory (%0d reads, %0d on the sample edge)",
                  reads, valid_at_sample);
+        $display("PASS intentional overruns: late read slots=%0d late write slots=%0d",
+                 late_reads, late_writes);
         $finish;
     end
 

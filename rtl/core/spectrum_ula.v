@@ -115,8 +115,9 @@ module spectrum_ula (
     assign screen_rd_offset = request_x[1] ? {3'b110, row[7:3], column} :
                                               {row[7:6], row[2:0], row[5:3], column};
 
-    reg read_pending;
-    reg [1:0] read_slot;
+    reg [1:0] read_pending;
+    reg [1:0] read_slot, capture_slot;
+    wire capture_read = read_pending[1] && screen_rd_valid;
     reg [7:0] bitmap_even, bitmap_odd, attr_even, attr_odd;
     reg [15:0] pixel_pair;
     reg [7:0] active_attr_even, active_attr_odd;
@@ -141,8 +142,9 @@ module spectrum_ula (
             ula_y <= 9'd0;
             flash_phase <= 1'b0;
             flash_count <= 4'd0;
-            read_pending <= 1'b0;
+            read_pending <= 2'b0;
             read_slot <= 2'd0;
+            capture_slot <= 2'd0;
             bitmap_even <= 8'd0;
             bitmap_odd <= 8'd0;
             attr_even <= 8'd0;
@@ -157,14 +159,17 @@ module spectrum_ula (
             ula_y <= 9'd0;
             flash_phase <= 1'b0;
             flash_count <= 4'd0;
-            read_pending <= 1'b0;
+            read_pending <= 2'b0;
             last_asic_bus <= 8'hff;
         end else begin
-            read_pending <= screen_rd_req;
+            // Keep the destination tag aligned with the registered mirror byte.
+            read_pending <= {read_pending[0], screen_rd_req};
             if (screen_rd_req)
                 read_slot <= request_x[2:1];
-            if (read_pending && screen_rd_valid) begin
-                case (read_slot)
+            if (read_pending[0])
+                capture_slot <= read_slot;
+            if (capture_read) begin
+                case (capture_slot)
                     2'd0: bitmap_even <= screen_rd_data;
                     2'd1: attr_even <= screen_rd_data;
                     2'd2: bitmap_odd <= screen_rd_data;
@@ -193,7 +198,10 @@ module spectrum_ula (
                     (draw_x == 10'h3ff || draw_x < 10'd255)) begin
                     pixel_pair <= {bitmap_even, bitmap_odd};
                     active_attr_even <= attr_even;
-                    active_attr_odd <= attr_odd;
+                    // At two fabric clocks per pixel the final attribute
+                    // can arrive on the pixel-pair load edge itself.
+                    active_attr_odd <= capture_read && capture_slot == 2'd3 ?
+                                       screen_rd_data : attr_odd;
                 end
             end
         end

@@ -39,6 +39,9 @@ module sd_spi_reader #(
     reg [8:0] offset;
     reg [12:0] retries;
     reg [23:0] wait_count;
+    // Terminal flag for the current count. Compute it from the preceding
+    // count on increments so timeout handling only consumes a register.
+    reg wait_expired;
     reg [15:0] sector_crc;
     reg initialized, version2, block_addressing;
 
@@ -172,6 +175,7 @@ module sd_spi_reader #(
             offset <= 0;
             retries <= 0;
             wait_count <= 0;
+            wait_expired <= 1'b0;
             sector_crc <= 0;
             crc_hi <= 0;
             initialized <= 0;
@@ -269,6 +273,7 @@ module sd_spi_reader #(
                            end else finish(5);
                     CMD17: if (response == 0) begin
                                wait_count <= 0;
+                               wait_expired <= TOKEN_WAIT_BYTES == 24'd1;
                                offset <= 0;
                                sector_crc <= 0;
                                state <= TOKEN;
@@ -288,14 +293,18 @@ module sd_spi_reader #(
                 TOKEN: if (byte_done) begin
                     if (incoming == 8'hfe) state <= DATA;
                     else if (incoming != 8'hff) finish(5);
-                    else if (wait_count == TOKEN_WAIT_BYTES-24'd1) finish(4);
-                    else wait_count <= wait_count + 1'b1;
+                    else if (wait_expired) finish(4);
+                    else begin
+                        wait_count <= wait_count + 1'b1;
+                        wait_expired <= wait_count == TOKEN_WAIT_BYTES-24'd2;
+                    end
                 end
                 DATA: if (byte_done) begin
                     sector_crc <= crc16_byte(sector_crc, incoming);
                     sd_blk_rx_data <= incoming;
                     sd_blk_rx_valid <= 1;
                     wait_count <= 0;
+                    wait_expired <= CLIENT_WAIT_CYCLES == 24'd1;
                     state <= OFFER;
                 end
                 OFFER: if (sd_blk_rx_ready) begin
@@ -305,10 +314,13 @@ module sd_spi_reader #(
                         offset <= offset + 1'b1;
                         state <= DATA;
                     end
-                end else if (wait_count == CLIENT_WAIT_CYCLES-24'd1) begin
+                end else if (wait_expired) begin
                     sd_blk_rx_valid <= 0;
                     finish(4);
-                end else wait_count <= wait_count + 1'b1;
+                end else begin
+                    wait_count <= wait_count + 1'b1;
+                    wait_expired <= wait_count == CLIENT_WAIT_CYCLES-24'd2;
+                end
                 CRC_HI: if (byte_done) begin
                     crc_hi <= incoming;
                     state <= CRC_LO;

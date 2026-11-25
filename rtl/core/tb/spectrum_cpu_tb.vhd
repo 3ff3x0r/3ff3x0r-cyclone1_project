@@ -22,7 +22,7 @@ begin
             clk_sys => clk_sys, reset_n => reset_n, ce_p => ce_p, ce_n => ce_n,
             int_n => '1', m1_n => m1_n, mreq_n => mreq_n, iorq_n => iorq_n,
             rd_n => rd_n, wr_n => wr_n, rfsh_n => rfsh_n, addr => addr,
-            data_in => data_in, data_out => data_out
+            data_in => data_in, data_out => data_out, read_on_neg => open
         );
 
     process(addr)

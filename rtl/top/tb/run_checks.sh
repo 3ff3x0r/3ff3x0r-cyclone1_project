@@ -12,9 +12,8 @@ donor=vendor/ZX_Spectrum-128K_MIST/T80
 ghdl_opts=(--std=93 -fsynopsys -fexplicit --syn-binding)
 
 # 1. Translate VHDL CPU wrapper to Verilog netlist
-sed 's/ioq and x"7"/ioq and "000000111"/' "$donor/T80.vhd" > "$build/T80.vhd"
 ghdl -a "${ghdl_opts[@]}" --workdir="$build/synth" -Werror -Wno-hide \
-    "$donor"/T80_{Pack,ALU,MCode,Reg}.vhd "$build/T80.vhd" "$donor/T80pa.vhd"
+    "$donor"/T80_{Pack,ALU,MCode,Reg}.vhd rtl/core/T80.vhd rtl/core/T80pa.vhd
 ghdl -a --std=93 --workdir="$build/synth" -Werror rtl/core/spectrum_cpu.vhd
 ghdl synth "${ghdl_opts[@]}" -Werror --workdir="$build/synth" --latches \
     --out=verilog spectrum_cpu > "$build/cpu_netlist.v"
@@ -28,6 +27,7 @@ awk '
 cat >> "$build/spectrum_cpu.v" <<'VERILOG'
     wire unused_inputs = &{clk_sys, reset_n, ce_p, ce_n, int_n, data_in};
     assign {m1_n, mreq_n, iorq_n, rd_n, wr_n, rfsh_n} = 6'b111111;
+    assign read_on_neg = 1'b0;
     assign addr = 16'd0;
     assign data_out = 8'd0;
 endmodule
@@ -42,6 +42,7 @@ rtl=(
     rtl/memory/sdram_x16.v
     rtl/memory/screen_mirror.v
     rtl/core/core_subsystem.v
+    rtl/core/cpu_clock_bridge.v
     rtl/core/spectrum_mmu.v
     rtl/core/spectrum_io.v
     rtl/core/spectrum_ula.v
@@ -82,9 +83,15 @@ iverilog -g2001 -s boot_bus_adapter_tb -o "$build/boot_bus_adapter.vvp" \
     rtl/top/boot_bus_adapter.v rtl/top/tb/boot_bus_adapter_tb.v
 vvp "$build/boot_bus_adapter.vvp"
 
+iverilog -g2001 -s boot_completion_tb -o "$build/boot_completion.vvp" \
+    rtl/core/{core_subsystem,cpu_clock_bridge,spectrum_mmu,spectrum_io,spectrum_ula}.v "$build/cpu_netlist.v" \
+    rtl/top/boot_bus_adapter.v rtl/storage/boot_sd_bridge.v rtl/core/tb/cpu_clock_model.v \
+    rtl/top/tb/boot_completion_tb.v
+vvp -N "$build/boot_completion.vvp" "+cpu_align=${CPU_ALIGNMENT:-0}"
+
 # 6. Mixed-language integration with the pin-level SDRAM model.
 # The existing SDRAM model uses SystemVerilog casts.
 iverilog -g2012 -s spectrum_top_tb -o "$build/spectrum_top.vvp" \
     "${rtl[@]}" "$build/cpu_netlist.v" rtl/memory/tb/sdram_x16_model.v \
-    rtl/top/tb/spectrum_top_tb.v
-vvp -N "$build/spectrum_top.vvp"
+    rtl/core/tb/cpu_clock_model.v rtl/top/tb/spectrum_top_tb.v
+vvp -N "$build/spectrum_top.vvp" "+cpu_align=${CPU_ALIGNMENT:-0}"

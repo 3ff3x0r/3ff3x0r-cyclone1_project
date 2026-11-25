@@ -12,8 +12,9 @@ set_global_assignment -name RESERVE_ALL_UNUSED_PINS "AS INPUT TRI-STATED"
 
 # Match the standalone SDRAM fit's c0/e0 clock names and U5 port names.
 set_global_assignment -name SDC_FILE trhmsx_mem_fit.sdc
+set_global_assignment -name SDC_FILE trhmsx_spectrum_cpu.sdc
 
-# Source manifest. Quartus analyzes the original T80 VHDL.
+# Source manifest. Use the project-owned T80 core with the pinned donor support files.
 set_global_assignment -name VERILOG_FILE trhmsx_spectrum_top.v
 set_global_assignment -name VERILOG_FILE ../../rtl/top/spectrum_top.v
 set_global_assignment -name VERILOG_FILE ../../rtl/top/boot_orchestrator.v
@@ -23,6 +24,7 @@ set_global_assignment -name VERILOG_FILE ../../rtl/memory/mem_arbiter.v
 set_global_assignment -name VERILOG_FILE ../../rtl/memory/sdram_x16.v
 set_global_assignment -name VERILOG_FILE ../../rtl/memory/screen_mirror.v
 set_global_assignment -name VERILOG_FILE ../../rtl/core/core_subsystem.v
+set_global_assignment -name VERILOG_FILE ../../rtl/core/cpu_clock_bridge.v
 set_global_assignment -name VERILOG_FILE ../../rtl/core/spectrum_mmu.v
 set_global_assignment -name VERILOG_FILE ../../rtl/core/spectrum_io.v
 set_global_assignment -name VERILOG_FILE ../../rtl/core/spectrum_ula.v
@@ -40,8 +42,8 @@ set_global_assignment -name VHDL_FILE ../../vendor/ZX_Spectrum-128K_MIST/T80/T80
 set_global_assignment -name VHDL_FILE ../../vendor/ZX_Spectrum-128K_MIST/T80/T80_ALU.vhd
 set_global_assignment -name VHDL_FILE ../../vendor/ZX_Spectrum-128K_MIST/T80/T80_MCode.vhd
 set_global_assignment -name VHDL_FILE ../../vendor/ZX_Spectrum-128K_MIST/T80/T80_Reg.vhd
-set_global_assignment -name VHDL_FILE ../../vendor/ZX_Spectrum-128K_MIST/T80/T80.vhd
-set_global_assignment -name VHDL_FILE ../../vendor/ZX_Spectrum-128K_MIST/T80/T80pa.vhd
+set_global_assignment -name VHDL_FILE ../../rtl/core/T80.vhd
+set_global_assignment -name VHDL_FILE ../../rtl/core/T80pa.vhd
 set_global_assignment -name VHDL_FILE ../../rtl/core/spectrum_cpu.vhd
 
 # Fabric pads from pins.csv. Active Serial and JTAG are dedicated.
@@ -51,41 +53,41 @@ set_location_assignment PIN_28 -to clk_21m
 set_location_assignment PIN_29 -to ext_clk
 
 # sdram
-set_location_assignment PIN_203 -to {sdram_a[0]}
-set_location_assignment PIN_206 -to {sdram_a[1]}
-set_location_assignment PIN_207 -to {sdram_a[2]}
-set_location_assignment PIN_208 -to {sdram_a[3]}
-set_location_assignment PIN_235 -to {sdram_a[4]}
-set_location_assignment PIN_234 -to {sdram_a[5]}
-set_location_assignment PIN_233 -to {sdram_a[6]}
-set_location_assignment PIN_228 -to {sdram_a[7]}
-set_location_assignment PIN_227 -to {sdram_a[8]}
-set_location_assignment PIN_226 -to {sdram_a[9]}
-set_location_assignment PIN_202 -to {sdram_a[10]}
-set_location_assignment PIN_225 -to {sdram_a[11]}
-set_location_assignment PIN_224 -to {sdram_a[12]}
-set_location_assignment PIN_181 -to {sdram_dq[0]}
-set_location_assignment PIN_182 -to {sdram_dq[1]}
-set_location_assignment PIN_183 -to {sdram_dq[2]}
-set_location_assignment PIN_184 -to {sdram_dq[3]}
-set_location_assignment PIN_185 -to {sdram_dq[4]}
-set_location_assignment PIN_186 -to {sdram_dq[5]}
-set_location_assignment PIN_187 -to {sdram_dq[6]}
-set_location_assignment PIN_188 -to {sdram_dq[7]}
-set_location_assignment PIN_222 -to {sdram_dq[8]}
-set_location_assignment PIN_219 -to {sdram_dq[9]}
-set_location_assignment PIN_218 -to {sdram_dq[10]}
-set_location_assignment PIN_217 -to {sdram_dq[11]}
-set_location_assignment PIN_216 -to {sdram_dq[12]}
-set_location_assignment PIN_215 -to {sdram_dq[13]}
-set_location_assignment PIN_214 -to {sdram_dq[14]}
-set_location_assignment PIN_213 -to {sdram_dq[15]}
-set_location_assignment PIN_200 -to {sdram_ba[0]}
-set_location_assignment PIN_201 -to {sdram_ba[1]}
+set_location_assignment PIN_203 -to sdram_a[0]
+set_location_assignment PIN_206 -to sdram_a[1]
+set_location_assignment PIN_207 -to sdram_a[2]
+set_location_assignment PIN_208 -to sdram_a[3]
+set_location_assignment PIN_235 -to sdram_a[4]
+set_location_assignment PIN_234 -to sdram_a[5]
+set_location_assignment PIN_233 -to sdram_a[6]
+set_location_assignment PIN_228 -to sdram_a[7]
+set_location_assignment PIN_227 -to sdram_a[8]
+set_location_assignment PIN_226 -to sdram_a[9]
+set_location_assignment PIN_202 -to sdram_a[10]
+set_location_assignment PIN_225 -to sdram_a[11]
+set_location_assignment PIN_224 -to sdram_a[12]
+set_location_assignment PIN_181 -to sdram_dq[0]
+set_location_assignment PIN_182 -to sdram_dq[1]
+set_location_assignment PIN_183 -to sdram_dq[2]
+set_location_assignment PIN_184 -to sdram_dq[3]
+set_location_assignment PIN_185 -to sdram_dq[4]
+set_location_assignment PIN_186 -to sdram_dq[5]
+set_location_assignment PIN_187 -to sdram_dq[6]
+set_location_assignment PIN_188 -to sdram_dq[7]
+set_location_assignment PIN_222 -to sdram_dq[8]
+set_location_assignment PIN_219 -to sdram_dq[9]
+set_location_assignment PIN_218 -to sdram_dq[10]
+set_location_assignment PIN_217 -to sdram_dq[11]
+set_location_assignment PIN_216 -to sdram_dq[12]
+set_location_assignment PIN_215 -to sdram_dq[13]
+set_location_assignment PIN_214 -to sdram_dq[14]
+set_location_assignment PIN_213 -to sdram_dq[15]
+set_location_assignment PIN_200 -to sdram_ba[0]
+set_location_assignment PIN_201 -to sdram_ba[1]
 set_location_assignment PIN_38 -to sdram_clk
 set_location_assignment PIN_39 -to sdram_cke
-set_location_assignment PIN_193 -to {sdram_dqm[0]}
-set_location_assignment PIN_223 -to {sdram_dqm[1]}
+set_location_assignment PIN_193 -to sdram_dqm[0]
+set_location_assignment PIN_223 -to sdram_dqm[1]
 set_location_assignment PIN_197 -to sdram_cs_n
 set_location_assignment PIN_196 -to sdram_ras_n
 set_location_assignment PIN_195 -to sdram_cas_n
@@ -108,38 +110,38 @@ set_location_assignment PIN_73 -to ddc_sda
 set_location_assignment PIN_74 -to vga_vs_n
 set_location_assignment PIN_75 -to vga_hs_n
 set_location_assignment PIN_76 -to ddc_scl
-set_location_assignment PIN_95 -to {vga_r[0]}
-set_location_assignment PIN_98 -to {vga_r[1]}
-set_location_assignment PIN_99 -to {vga_r[2]}
-set_location_assignment PIN_100 -to {vga_r[3]}
-set_location_assignment PIN_101 -to {vga_r[4]}
-set_location_assignment PIN_104 -to {vga_r[5]}
-set_location_assignment PIN_85 -to {vga_g[0]}
-set_location_assignment PIN_86 -to {vga_g[1]}
-set_location_assignment PIN_87 -to {vga_g[2]}
-set_location_assignment PIN_88 -to {vga_g[3]}
-set_location_assignment PIN_93 -to {vga_g[4]}
-set_location_assignment PIN_94 -to {vga_g[5]}
-set_location_assignment PIN_77 -to {vga_b[0]}
-set_location_assignment PIN_78 -to {vga_b[1]}
-set_location_assignment PIN_79 -to {vga_b[2]}
-set_location_assignment PIN_82 -to {vga_b[3]}
-set_location_assignment PIN_83 -to {vga_b[4]}
-set_location_assignment PIN_84 -to {vga_b[5]}
+set_location_assignment PIN_95 -to vga_r[0]
+set_location_assignment PIN_98 -to vga_r[1]
+set_location_assignment PIN_99 -to vga_r[2]
+set_location_assignment PIN_100 -to vga_r[3]
+set_location_assignment PIN_101 -to vga_r[4]
+set_location_assignment PIN_104 -to vga_r[5]
+set_location_assignment PIN_85 -to vga_g[0]
+set_location_assignment PIN_86 -to vga_g[1]
+set_location_assignment PIN_87 -to vga_g[2]
+set_location_assignment PIN_88 -to vga_g[3]
+set_location_assignment PIN_93 -to vga_g[4]
+set_location_assignment PIN_94 -to vga_g[5]
+set_location_assignment PIN_77 -to vga_b[0]
+set_location_assignment PIN_78 -to vga_b[1]
+set_location_assignment PIN_79 -to vga_b[2]
+set_location_assignment PIN_82 -to vga_b[3]
+set_location_assignment PIN_83 -to vga_b[4]
+set_location_assignment PIN_84 -to vga_b[5]
 
 # audio
-set_location_assignment PIN_105 -to {audio_l[0]}
-set_location_assignment PIN_106 -to {audio_l[1]}
-set_location_assignment PIN_107 -to {audio_l[2]}
-set_location_assignment PIN_108 -to {audio_l[3]}
-set_location_assignment PIN_113 -to {audio_l[4]}
-set_location_assignment PIN_114 -to {audio_l[5]}
-set_location_assignment PIN_115 -to {audio_r[0]}
-set_location_assignment PIN_116 -to {audio_r[1]}
-set_location_assignment PIN_117 -to {audio_r[2]}
-set_location_assignment PIN_118 -to {audio_r[3]}
-set_location_assignment PIN_119 -to {audio_r[4]}
-set_location_assignment PIN_120 -to {audio_r[5]}
+set_location_assignment PIN_105 -to audio_l[0]
+set_location_assignment PIN_106 -to audio_l[1]
+set_location_assignment PIN_107 -to audio_l[2]
+set_location_assignment PIN_108 -to audio_l[3]
+set_location_assignment PIN_113 -to audio_l[4]
+set_location_assignment PIN_114 -to audio_l[5]
+set_location_assignment PIN_115 -to audio_r[0]
+set_location_assignment PIN_116 -to audio_r[1]
+set_location_assignment PIN_117 -to audio_r[2]
+set_location_assignment PIN_118 -to audio_r[3]
+set_location_assignment PIN_119 -to audio_r[4]
+set_location_assignment PIN_120 -to audio_r[5]
 
 # joy1
 set_location_assignment PIN_1 -to joy1_up
@@ -213,73 +215,73 @@ set_location_assignment PIN_238 -to unused_238
 set_location_assignment PIN_239 -to unused_239
 
 # Use the same SDRAM I/O register policy as the standalone memory fit.
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_a[0]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_a[1]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_a[2]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_a[3]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_a[4]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_a[5]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_a[6]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_a[7]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_a[8]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_a[9]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_a[10]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_a[11]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_a[12]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_ba[0]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_ba[1]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dq[0]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dq[1]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dq[2]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dq[3]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dq[4]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dq[5]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dq[6]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dq[7]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dq[8]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dq[9]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dq[10]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dq[11]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dq[12]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dq[13]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dq[14]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dq[15]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dqm[0]}
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {sdram_dqm[1]}
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_a[0]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_a[1]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_a[2]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_a[3]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_a[4]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_a[5]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_a[6]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_a[7]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_a[8]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_a[9]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_a[10]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_a[11]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_a[12]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_ba[0]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_ba[1]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dq[0]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dq[1]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dq[2]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dq[3]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dq[4]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dq[5]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dq[6]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dq[7]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dq[8]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dq[9]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dq[10]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dq[11]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dq[12]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dq[13]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dq[14]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dq[15]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dqm[0]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_dqm[1]
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_cs_n
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_ras_n
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_cas_n
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_we_n
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sdram_cke
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to {sdram_dq[0]}
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to {sdram_dq[1]}
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to {sdram_dq[2]}
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to {sdram_dq[3]}
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to {sdram_dq[4]}
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to {sdram_dq[5]}
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to {sdram_dq[6]}
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to {sdram_dq[7]}
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to {sdram_dq[8]}
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to {sdram_dq[9]}
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to {sdram_dq[10]}
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to {sdram_dq[11]}
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to {sdram_dq[12]}
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to {sdram_dq[13]}
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to {sdram_dq[14]}
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to {sdram_dq[15]}
-set_instance_assignment -name FAST_INPUT_REGISTER OFF -to {sdram_dq[0]}
-set_instance_assignment -name FAST_INPUT_REGISTER OFF -to {sdram_dq[1]}
-set_instance_assignment -name FAST_INPUT_REGISTER OFF -to {sdram_dq[2]}
-set_instance_assignment -name FAST_INPUT_REGISTER OFF -to {sdram_dq[3]}
-set_instance_assignment -name FAST_INPUT_REGISTER OFF -to {sdram_dq[4]}
-set_instance_assignment -name FAST_INPUT_REGISTER OFF -to {sdram_dq[5]}
-set_instance_assignment -name FAST_INPUT_REGISTER OFF -to {sdram_dq[6]}
-set_instance_assignment -name FAST_INPUT_REGISTER OFF -to {sdram_dq[7]}
-set_instance_assignment -name FAST_INPUT_REGISTER OFF -to {sdram_dq[8]}
-set_instance_assignment -name FAST_INPUT_REGISTER OFF -to {sdram_dq[9]}
-set_instance_assignment -name FAST_INPUT_REGISTER OFF -to {sdram_dq[10]}
-set_instance_assignment -name FAST_INPUT_REGISTER OFF -to {sdram_dq[11]}
-set_instance_assignment -name FAST_INPUT_REGISTER OFF -to {sdram_dq[12]}
-set_instance_assignment -name FAST_INPUT_REGISTER OFF -to {sdram_dq[13]}
-set_instance_assignment -name FAST_INPUT_REGISTER OFF -to {sdram_dq[14]}
-set_instance_assignment -name FAST_INPUT_REGISTER OFF -to {sdram_dq[15]}
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[0]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[1]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[2]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[3]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[4]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[5]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[6]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[7]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[8]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[9]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[10]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[11]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[12]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[13]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[14]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sdram_dq[15]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[0]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[1]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[2]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[3]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[4]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[5]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[6]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[7]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[8]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[9]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[10]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[11]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[12]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[13]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[14]
+set_instance_assignment -name FAST_INPUT_REGISTER OFF -to sdram_dq[15]

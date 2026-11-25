@@ -114,7 +114,7 @@ guest decoder or boot bus adapter according to the boot overlay ownership.
 | Ports | Width | Direction | Meaning |
 |---|---:|---|---|
 | `screen_rd_req`, `screen_rd_bank7`, `screen_rd_offset` | 1, 1, 13 | C → B | One synchronous read per edge. 0 selects physical bank 5, 1 selects bank 7. Offset 0–6911. |
-| `screen_rd_valid`, `screen_rd_data` | 1, 8 | B → C | Valid response in the cycle after the sampling edge. No backpressure. |
+| `screen_rd_valid`, `screen_rd_data` | 1, 8 | B → C | Registered after the edge following request capture, for consumption two `clk_sys` edges after capture. No backpressure. |
 | `ula_bus_valid`, `ula_bus_is_ram`, `ula_bus_ram_bank`, `ula_contend_id` | 1, 1, 3, 3 | C MMU → C ULA | Qualify the resolved physical RAM bank for the current bus cycle. Profile IDs below. |
 
 Every committed write from either client to RAM bank 5 or 7 at offsets

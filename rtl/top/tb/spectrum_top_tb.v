@@ -46,8 +46,10 @@ module spectrum_top_tb;
     wire [1:0] sdram_ba, sdram_dqm;
     wire [15:0] sdram_dq;
 
+    wire clk_cpu;
+    cpu_clock_model #(.FABRIC_PERIOD_PS(SYS_PERIOD_PS)) cpu_clock (clk_cpu);
     spectrum_top dut (
-        .clk_sys(clk_sys), .rst_n(rst_n), .clk_vga(clk_sys), .rst_vga_n(rst_n),
+        .clk_sys(clk_sys), .clk_cpu(clk_cpu), .rst_n(rst_n), .clk_vga(clk_sys), .rst_vga_n(rst_n),
         .sdram_cke(sdram_cke), .sdram_cs_n(sdram_cs_n), .sdram_ras_n(sdram_ras_n),
         .sdram_cas_n(sdram_cas_n), .sdram_we_n(sdram_we_n), .sdram_a(sdram_a),
         .sdram_ba(sdram_ba), .sdram_dqm(sdram_dqm), .sdram_dq(sdram_dq),

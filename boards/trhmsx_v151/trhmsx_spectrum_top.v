@@ -118,16 +118,17 @@ module trhmsx_spectrum_top #(
     assign cart_rd_n = 1'b1;
     assign cart_clock_out = 1'b0;
 
-    wire clk_sys;
+    wire clk_sys, clk_cpu;
     wire pll_locked;
     /* verilator lint_off UNUSEDSIGNAL */
     wire [5:0] pll_clocks;
     wire [3:0] pll_ext_clocks;
     /* verilator lint_on UNUSEDSIGNAL */
     assign clk_sys = pll_clocks[0];
+    assign clk_cpu = pll_clocks[1];
     assign sdram_clk = pll_ext_clocks[0];
 
-    // PLL1 drives the fabric on c0 and the dedicated U1-38 pad on e0.
+    // PLL1 drives the fabric on c0, the CPU on c1 and the U1-38 pad on e0.
     // Reuse the standalone memory fit's 2.909 ns e0 lead. TimeQuest
     // derives both clocks for rising-edge commands and falling-edge DQ.
     altpll #(
@@ -139,6 +140,10 @@ module trhmsx_spectrum_top #(
         .clk0_divide_by(1),
         .clk0_duty_cycle(50),
         .clk0_phase_shift("0"),
+        .clk1_multiply_by(2),
+        .clk1_divide_by(1),
+        .clk1_duty_cycle(50),
+        .clk1_phase_shift("0"),
         .extclk0_multiply_by(4),
         .extclk0_divide_by(1),
         .extclk0_duty_cycle(50),
@@ -148,6 +153,7 @@ module trhmsx_spectrum_top #(
         .port_areset("PORT_USED"),
         .port_locked("PORT_USED"),
         .port_clk0("PORT_USED"),
+        .port_clk1("PORT_USED"),
         .port_extclk0("PORT_USED")
     ) memory_pll (
         .inclk({1'b0, clk_21m}),
@@ -175,7 +181,7 @@ module trhmsx_spectrum_top #(
     // The board has no external loader port. Until the loader producer is
     // integrated, keep DMA and commit idle and retain boot ownership.
     spectrum_top #(.BOOT_ROM_FILE(BOOT_ROM_FILE)) spectrum (
-        .clk_sys(clk_sys), .rst_n(rst_n),
+        .clk_sys(clk_sys), .clk_cpu(clk_cpu), .rst_n(rst_n),
         .clk_vga(clk_sys), .rst_vga_n(rst_n),
         .sdram_cke(sdram_cke), .sdram_cs_n(sdram_cs_n),
         .sdram_ras_n(sdram_ras_n), .sdram_cas_n(sdram_cas_n), .sdram_we_n(sdram_we_n),

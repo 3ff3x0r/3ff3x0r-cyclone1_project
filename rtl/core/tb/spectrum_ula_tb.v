@@ -14,7 +14,8 @@ module spectrum_ula_tb;
     reg bank7 = 0, ula_bus_valid = 1, ula_bus_is_ram = 1;
     wire screen_rd_req, screen_rd_bank7, ula_px_ce;
     wire [12:0] screen_rd_offset;
-    reg screen_rd_valid = 0;
+    reg screen_read_sampled = 0, screen_rd_valid = 0;
+    reg [7:0] screen_data_sampled;
     reg [7:0] screen_rd_data;
     wire [3:0] ula_color;
     wire [9:0] ula_x;
@@ -60,9 +61,11 @@ module spectrum_ula_tb;
         end
     endfunction
     always @(posedge clk_sys) begin
-        screen_rd_valid <= screen_rd_req;
+        screen_read_sampled <= screen_rd_req;
+        screen_rd_valid <= screen_read_sampled;
+        screen_rd_data <= screen_data_sampled;
         if (screen_rd_req)
-            screen_rd_data <= mirror_byte(screen_rd_bank7, screen_rd_offset >= 6144, screen_rd_offset[0]);
+            screen_data_sampled <= mirror_byte(screen_rd_bank7, screen_rd_offset >= 6144, screen_rd_offset[0]);
     end
 
     task check_membership;
