@@ -1,5 +1,7 @@
 module ps2_receiver #(
-    parameter integer FRAME_TIMEOUT_CYCLES = 21478
+    parameter integer FRAME_TIMEOUT_CYCLES = 21478,
+    // Consecutive samples per transition. The default is about 186 ns at 85.909 MHz.
+    parameter integer CLOCK_FILTER_CYCLES = 16
 ) (
     input  wire       clk_sys,
     input  wire       rst_n,
@@ -22,10 +24,16 @@ module ps2_receiver #(
     localparam integer LAST_TICK = FRAME_TIMEOUT_CYCLES - 1;
     localparam integer TIMER_WIDTH = count_width(LAST_TICK);
     localparam [TIMER_WIDTH-1:0] TIMEOUT = LAST_TICK[TIMER_WIDTH-1:0];
+    localparam integer FILTER_LAST_TICK = CLOCK_FILTER_CYCLES - 1;
+    localparam integer FILTER_WIDTH = count_width(FILTER_LAST_TICK);
+    localparam [FILTER_WIDTH-1:0] FILTER_LIMIT = FILTER_LAST_TICK[FILTER_WIDTH-1:0];
 
     reg [1:0] clock_sync, data_sync;
-    reg previous_clock;
-    wire falling_clock = previous_clock && !clock_sync[1];
+    reg filtered_clock;
+    reg [FILTER_WIDTH-1:0] clock_stable_ticks;
+    wire clock_differs = clock_sync[1] != filtered_clock;
+    wire clock_changed = clock_differs && clock_stable_ticks == FILTER_LIMIT;
+    wire falling_clock = clock_changed && filtered_clock;
     reg armed;
     reg [TIMER_WIDTH-1:0] quiet_ticks;
     reg [3:0] bit_index;
@@ -35,11 +43,17 @@ module ps2_receiver #(
         if (!rst_n) begin
             clock_sync <= 2'b11;
             data_sync <= 2'b11;
-            previous_clock <= 1'b1;
+            filtered_clock <= 1'b1;
+            clock_stable_ticks <= 0;
         end else begin
             clock_sync <= {clock_sync[0], ps2_clk};
             data_sync <= {data_sync[0], ps2_data};
-            previous_clock <= clock_sync[1];
+            if (clock_changed)
+                filtered_clock <= clock_sync[1];
+            if (!clock_differs || clock_changed)
+                clock_stable_ticks <= 0;
+            else
+                clock_stable_ticks <= clock_stable_ticks + 1'b1;
         end
     end
 

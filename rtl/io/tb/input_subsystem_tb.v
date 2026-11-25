@@ -1,10 +1,12 @@
 `timescale 1ns/1ps
 
 module input_subsystem_tb;
+    localparam integer FILTER_CYCLES = 24;
     reg clk_sys = 0;
     always #500 clk_sys = !clk_sys;
     reg rst_n = 0;
     reg ps2_clk = 1, ps2_data = 1;
+    reg inject_high_glitch = 0;
     reg [5:0] joy1_n = 6'h3f, joy2_n = 6'h3f;
     wire [39:0] key_matrix_n;
     wire [5:0] joy1, joy2;
@@ -12,7 +14,7 @@ module input_subsystem_tb;
     reg [1:0] input_map = 0, b1_map = 1, b2_map = 1;
     integer toggles = 0, rewinds = 0;
 
-    input_subsystem #(.CLK_SYS_HZ(1000000)) dut (
+    input_subsystem #(.CLK_SYS_HZ(1000000), .PS2_CLOCK_FILTER_CYCLES(FILTER_CYCLES)) dut (
         .clk_sys(clk_sys), .rst_n(rst_n), .ps2_clk(ps2_clk), .ps2_data(ps2_data),
         .joy1_n(joy1_n), .joy2_n(joy2_n), .key_matrix_n(key_matrix_n),
         .joy1(joy1), .joy2(joy2), .soft_reset_key(soft_reset_key),
@@ -66,9 +68,15 @@ module input_subsystem_tb;
             ps2_data = value;
             repeat (18) @(negedge clk_sys);
             ps2_clk = 0;
-            repeat (31) @(negedge clk_sys);
+            repeat (FILTER_CYCLES) @(negedge clk_sys);
+            if (inject_high_glitch) begin
+                ps2_clk = 1;
+                repeat (FILTER_CYCLES - 1) @(negedge clk_sys);
+                ps2_clk = 0;
+            end
+            repeat (FILTER_CYCLES) @(negedge clk_sys);
             ps2_clk = 1;
-            repeat (11) @(negedge clk_sys);
+            repeat (FILTER_CYCLES) @(negedge clk_sys);
         end
     endtask
 
@@ -106,6 +114,26 @@ module input_subsystem_tb;
         end
     endtask
 
+    localparam [39:0] CAPS_SHIFT = 40'd1 << 0, SYMBOL_SHIFT = 40'd1 << 36;
+    task check_shifted_punctuation;
+        input [7:0] shift_scan;
+        begin
+            send(shift_scan); expect_keys(CAPS_SHIFT);
+            send(8'h4e); expect_keys(SYMBOL_SHIFT | (40'd1 << 20)); // Underscore
+            send(8'h52); expect_keys(SYMBOL_SHIFT | (40'd1 << 20) | (40'd1 << 25));
+            release_key(8'h4e); expect_keys(SYMBOL_SHIFT | (40'd1 << 25)); // Double quote
+            send(8'he0); send(8'h6b);
+            expect_keys(CAPS_SHIFT | SYMBOL_SHIFT | (40'd1 << 19) | (40'd1 << 25));
+            send(8'he0); release_key(8'h6b);
+            expect_keys(SYMBOL_SHIFT | (40'd1 << 25));
+            release_key(8'h52); expect_keys(CAPS_SHIFT);
+            send(8'h4e); expect_keys(SYMBOL_SHIFT | (40'd1 << 20));
+            release_key(shift_scan); expect_keys(SYMBOL_SHIFT | (40'd1 << 20));
+            send(8'h4e); expect_keys(SYMBOL_SHIFT | (40'd1 << 20));
+            release_key(8'h4e); expect_keys(0);
+        end
+    endtask
+
     task expect_joysticks;
         input [5:0] p1, p2;
         input [4:0] row3, row4, row7;
@@ -137,6 +165,30 @@ module input_subsystem_tb;
         rst_n = 1;
         repeat (260) @(negedge clk_sys);
         expect_keys(0);
+
+        // Two short low pulses cannot accumulate into a qualified edge.
+        repeat (2) begin
+            ps2_clk = 0;
+            repeat (FILTER_CYCLES - 1) @(negedge clk_sys);
+            ps2_clk = 1;
+            repeat (4) @(negedge clk_sys);
+        end
+        expect_keys(0);
+        if (dut.receiver.bit_index !== 4'd0) begin
+            $display("FAIL short idle clock pulses advanced the receiver");
+            $finish;
+        end
+
+        // A short high pulse inside a low period cannot create a second edge.
+        inject_high_glitch = 1;
+        send(8'h1c); expect_keys(40'h20);
+        if (dut.receiver.bit_index !== 4'd0) begin
+            $display("FAIL clock glitches left an extra bit after a valid frame");
+            $finish;
+        end
+        inject_high_glitch = 0;
+        release_key(8'h1c); expect_keys(0);
+
         for (key = 0; key < 40; key = key + 1) begin
             send(MATRIX_CODES[(39-key)*8 +: 8]);
             expect_keys(40'd1 << key);
@@ -154,10 +206,21 @@ module input_subsystem_tb;
         release_key(8'h6b);
         expect_keys(0);
 
+        send(8'h4e); expect_keys(SYMBOL_SHIFT | (40'd1 << 33)); // Minus
+        release_key(8'h4e); expect_keys(0);
+        send(8'h52); expect_keys(SYMBOL_SHIFT | (40'd1 << 23)); // Apostrophe
+        send(8'h12); send(8'h52);
+        expect_keys(CAPS_SHIFT | SYMBOL_SHIFT | (40'd1 << 23));
+        release_key(8'h52); expect_keys(CAPS_SHIFT);
+        release_key(8'h12); expect_keys(0);
+        check_shifted_punctuation(8'h12);
+        check_shifted_punctuation(8'h59);
+
         // Punctuation captures its chord on the first make. Both Ctrl
         // keys, the physical Z key and a shifted punctuation key coexist.
         send(8'h14); send(8'he0); send(8'h14); send(8'h1a);
         send(8'h59); send(8'h4c);
+        expect_keys(40'h1000000002);
         release_key(8'h59); send(8'h4c);
         release_key(8'h14); release_key(8'h1a);
         expect_keys(40'h1000000002);
@@ -286,7 +349,7 @@ module input_subsystem_tb;
         release_key(8'h29); release_key(8'h45);
         expect_joysticks(0, 0, 5'h1f, 5'h1f, 5'h1f, 8'hff);
 
-        $display("PASS PS/2 frames, matrix and shortcuts, dual sticks and FE/Kempston fixture");
+        $display("PASS PS/2 frames and clock filtering, matrix and shortcuts, dual sticks and FE/Kempston fixture");
         $finish;
     end
 endmodule

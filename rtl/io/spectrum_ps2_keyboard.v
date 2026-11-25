@@ -228,7 +228,7 @@ module spectrum_ps2_keyboard #(
                 else if (key_update && scan == {1'b0, punctuation_scan(index)}) begin
                     held <= !break_pending;
                     if (!held && !break_pending)
-                        shifted_at_make <= extra[RS];
+                        shifted_at_make <= direct[0] || extra[RS];
                 end
             end
             assign plain[index] = held && !shifted_at_make;
@@ -243,7 +243,8 @@ module spectrum_ps2_keyboard #(
     reg [39:0] shortcuts;
     always @* begin
         shortcuts = 0;
-        shortcuts[0] = extra[RS] || left || down || up || right ||
+        shortcuts[0] = ((direct[0] || extra[RS]) && !(|shifted)) ||
+                       left || down || up || right ||
                        extra[BACKSPACE] || extra[CAPS_LOCK] || extra[ESC];
         shortcuts[1] = shifted[SEMICOLON];
         shortcuts[3] = shifted[SLASH];
@@ -252,17 +253,17 @@ module spectrum_ps2_keyboard #(
         shortcuts[14] = shifted[DOT];
         shortcuts[16] = extra[CAPS_LOCK];
         shortcuts[19] = left;
-        shortcuts[20] = extra[BACKSPACE] || plain[MINUS];
+        shortcuts[20] = extra[BACKSPACE] || shifted[MINUS];
         shortcuts[21] = extra[RBRACKET];
         shortcuts[22] = right || extra[LBRACKET];
-        shortcuts[23] = up || shifted[QUOTE] || extra[GRAVE];
+        shortcuts[23] = up || plain[QUOTE] || extra[GRAVE];
         shortcuts[24] = down;
-        shortcuts[25] = plain[QUOTE];
+        shortcuts[25] = shifted[QUOTE];
         shortcuts[26] = plain[SEMICOLON];
         shortcuts[30] = extra[KP_ENTER];
         shortcuts[31] = shifted[EQUALS];
         shortcuts[32] = plain[EQUALS];
-        shortcuts[33] = shifted[MINUS];
+        shortcuts[33] = plain[MINUS];
         shortcuts[35] = extra[ESC];
         shortcuts[36] = extra[RC] || (|plain) || (|shifted) ||
                         extra[LBRACKET] || extra[RBRACKET] || extra[GRAVE] ||
@@ -271,7 +272,7 @@ module spectrum_ps2_keyboard #(
         shortcuts[38] = plain[COMMA];
         shortcuts[39] = extra[BACKSLASH];
     end
-    assign key_matrix_n = ~(direct | shortcuts);
+    assign key_matrix_n = ~({direct[39:1], 1'b0} | shortcuts);
     assign tap_play_toggle = key_update && !break_pending && scan == extra_scan(F9) && !extra[F9];
     assign tap_rewind = key_update && !break_pending && scan == extra_scan(F10) && !extra[F10];
     assign soft_reset_key = extra[F11];

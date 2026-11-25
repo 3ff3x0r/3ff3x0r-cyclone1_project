@@ -40,7 +40,8 @@ YOSYS
     } > "$build/$top.ys"
     (cd -- "$build" && yosys -Q -T -s "$top.ys") > "$build/$top.yosys.log"
     printf 'PASS %s hierarchy/check, zero loops, latches and inferred memories\n' "$top"
-    rg ' +[0-9]+ +\$(lut|_DFF)' "$build/$top.yosys.log" | tail -n 4
+    # The optional summary depends on the Yosys version's stat layout.
+    rg ' +[0-9]+ +\$(lut|_DFF)' "$build/$top.yosys.log" | tail -n 4 || true
 }
 
 run_iverilog() {

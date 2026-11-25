@@ -1,5 +1,6 @@
 module input_subsystem #(
-    parameter integer CLK_SYS_HZ = 85909080
+    parameter integer CLK_SYS_HZ = 85909080,
+    parameter integer PS2_CLOCK_FILTER_CYCLES = 16
 ) (
     input  wire        clk_sys,
     input  wire        rst_n,
@@ -18,7 +19,10 @@ module input_subsystem #(
     wire [7:0] byte_data;
     wire byte_valid, frame_error;
 
-    ps2_receiver #(.FRAME_TIMEOUT_CYCLES((CLK_SYS_HZ + 3999) / 4000)) receiver (
+    ps2_receiver #(
+        .FRAME_TIMEOUT_CYCLES((CLK_SYS_HZ + 3999) / 4000),
+        .CLOCK_FILTER_CYCLES(PS2_CLOCK_FILTER_CYCLES)
+    ) receiver (
         .clk_sys(clk_sys), .rst_n(rst_n), .ps2_clk(ps2_clk), .ps2_data(ps2_data),
         .byte_data(byte_data), .byte_valid(byte_valid), .frame_error(frame_error)
     );

@@ -282,11 +282,47 @@ module audio_subsystem_tb;
         tap_ear_valid = 0;
         #1;
         if (ear_bit !== 0) begin $display("FAIL EAR return to idle"); $finish; end
+
         @(negedge clk_sys);
-        reset_guest;
+        mic_record = 0;
+        mic_bit = 1;
+        expect_mix(31, 31);
+        guest_reset_n = 0;
+        #1;
+        if (audio_l !== 6'd31 || audio_r !== 6'd31 ||
+            {dut.psg_a, dut.psg_b, dut.psg_c} !== 24'hffffff) begin
+            $display("FAIL guest reset changed registered audio before the clock edge");
+            $finish;
+        end
+        @(negedge clk_sys);
+        if ({audio_l, audio_r, dut.psg_a, dut.psg_b, dut.psg_c, mic_out} !== 0 ||
+            ay_rdata !== 8'hff) begin
+            $display("FAIL guest reset did not clear audio on the clock edge");
+            $finish;
+        end
+        guest_reset_n = 1;
+        ay_cycle(1, 8'h5a); // The reset register selection is R0.
+        expect_register(0, 8'h5a);
+        expect_register(7, 0);
         expect_register(8, 0);
+        expect_register(9, 0);
+        expect_register(10, 0);
+        expect_register(13, 0);
+        tick;
         expect_mix(0, 0);
-        $display("PASS AY masks, I/O, noise, envelopes, profile mute, DAC, MIC and EAR");
+
+        write_register(7, 8'h3f);
+        write_register(8, 15);
+        tick;
+        beeper_bit = 1;
+        expect_mix(47, 32);
+        rst_n = 0;
+        #1;
+        if ({audio_l, audio_r, dut.psg_a, mic_out} !== 0 || ay_rdata !== 8'hff) begin
+            $display("FAIL fabric reset did not clear audio before the clock edge");
+            $finish;
+        end
+        $display("PASS AY masks, I/O, noise, envelopes, profile mute, DAC, MIC, EAR and reset timing");
         $finish;
     end
 endmodule

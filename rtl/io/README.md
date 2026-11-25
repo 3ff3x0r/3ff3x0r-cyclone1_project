@@ -18,7 +18,7 @@ the local `ticket-c/core` worktree's `rtl/core/core_subsystem.v` and
 | C `core_subsystem` → F `audio_subsystem` | `mic_bit`, `beeper_bit` (1 each) | Held positive-logic outputs from FE bits 3 and 4. The DAC mixer samples them every fabric clock. |
 | A → C, D and F | `cfg_psg_enable` (1) | Active-high latched descriptor field. Wire it to C, D and `audio_subsystem`. |
 | A → C | `cfg_input_map_id`, `cfg_joy1_b_map`, `cfg_joy2_b_map` (2 each) | Latched descriptor fields. C uses them for combinational guest I/O decode. |
-| A → F | `rst_n`, `guest_reset_n` (1 each) | Active-low reset. Input uses fabric reset only. Audio uses fabric and guest reset. |
+| A → F | `rst_n`, `guest_reset_n` (1 each) | Input and audio use active-low asynchronous fabric reset. Audio also samples active-low guest reset on rising fabric clock edges. |
 | F `input_subsystem` → A and G | `soft_reset_key`, `recovery_key`, `tap_play_toggle`, `tap_rewind` (1 each) | Positive-logic F11/F12 held levels and one-clock F9/F10 pulses. |
 | G and A → F `audio_subsystem` | `tap_ear_valid`, `tap_ear_bit`, `ear_idle_bit`, `mic_record` (1 each) | G's held digital TAP level wins while valid. A supplies the selected profile's idle level. A/E asserts recording mode for the left DAC. |
 | F `audio_subsystem` → A | `audio_l`, `audio_r` (6 each), `mic_out` (1) | Registered unsigned DAC codes with zero on reset. `mic_out` is the clean positive-logic MIC level, gated by reset. |
@@ -68,19 +68,24 @@ Rows match A8 through A15 and columns match FE bits 0 through 4.
 | R Shift `59`, R Ctrl `E0 14`, keypad Enter `E0 5A` | CAPS SHIFT, SYMBOL SHIFT, ENTER |
 | Left/Down/Up/Right `E0 6B/72/75/74`, or keypad equivalents without E0 | CAPS SHIFT + 5/6/7/8 |
 | Backspace `66`, Caps Lock `58`, Escape `76` | CAPS SHIFT + 0/2/SPACE |
-| Period `49`, comma `41`, slash `4A`, semicolon `4C` | SYMBOL SHIFT + M/N/V/O, or T/R/C/Z with R Shift at make |
-| Quote `52`, minus `4E`, equals `55` | SYMBOL SHIFT + P/J/L, or 7/0/K with R Shift at make |
+| Period `49`, comma `41`, slash `4A`, semicolon `4C` | SYMBOL SHIFT + M/N/V/O, or T/R/C/Z with either Shift at make |
+| Quote `52`, minus `4E`, equals `55` | SYMBOL SHIFT + 7/J/K, or P/0/L with either Shift at make |
 | Left/right bracket `54/5B`, grave `0E`, backslash `5D`, keypad slash `E0 4A` | SYMBOL SHIFT + 8/9/7/B/V |
 | F9/F10/F11/F12 `01/09/78/07` | Play/pause, rewind, soft reset, recovery. Host controls only. |
 
-The receiver checks complete 11-bit frames and drops pending prefixes after
-a bad frame. A 250 µs gap between frame clocks aborts a partial frame.
+The receiver qualifies each synchronized clock transition with consecutive
+samples at the new level. The `PS2_CLOCK_FILTER_CYCLES` parameter defaults to
+16 samples, about 186 ns at 85.909 MHz. It checks complete 11-bit frames and
+drops pending prefixes after a bad frame. A 250 µs gap between frame clocks
+aborts a partial frame.
 After fabric reset or a stalled low line, reception resumes after 250 µs
 with both lines high. An uncompleted Set 2 prefix expires after 5 ms.
 Per-source held state keeps physical modifiers, aliases and chord members
 independent through typematic repeats and releases. A guest reset preserves
 physical input. A fabric reset or keyboard BAT clears keyboard-held state.
-Shifted punctuation retains its first-make chord through release.
+Shifted punctuation retains its first-make chord through release and suppresses
+CAPS SHIFT from both physical Shift keys while held. Cursor and editing
+shortcuts can still assert CAPS SHIFT.
 [IBM PS/2 Hardware Interface Technical Reference](https://www.jabse.com/L0lCTS9wYy9wczIvUGVyc29uYWxfU3lzdGVtXzJfSGFyZHdhcmVfSW50ZXJmYWNlX1RlY2huaWNhbF9SZWZlcmVuY2VfTWF5ODgucGRm)
 
 C mapping 0 supplies Sinclair P1 6/7/8/9/0 and P2 1/2/3/4/5 in
@@ -138,8 +143,8 @@ translated CPU, fixtures and logs under `/tmp`.
 
 | Subsystem | Simulated | Yosys generic LUTs / flip-flops | Quartus fitted | Board tested |
 |---|---|---:|---|---|
-| Input | PS/2 frames, holds, rollover, reset, joystick and FE/Kempston | 299 / 170 | Pending | Pending |
-| Audio | AY bus, 48/32/16-tick tone periods, noise, 16 envelope shapes, DAC, EAR and MIC | 437 / 234 | Pending | Pending |
+| Input | PS/2 frames and clock filtering, holds, rollover, reset, joystick and FE/Kempston | 312 / 174 | Pending | Pending |
+| Audio | AY bus, 48/32/16-tick tone periods, noise, 16 envelope shapes, DAC, EAR, MIC and reset timing | 473 / 234 | Pending | Pending |
 | C/D/F | T80 instructions through real FE, Kempston and AY with D clock enables |  | Pending | Pending |
 
 Yosys inferred zero latches and zero memories in both F subtrees.

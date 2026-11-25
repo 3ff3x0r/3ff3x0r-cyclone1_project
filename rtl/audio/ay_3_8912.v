@@ -36,7 +36,8 @@ module ay_3_8912 #(
     parameter [7:0] IO_A_INPUT = 8'hff
 ) (
     input  wire       clk_sys,
-    input  wire       reset_n,
+    input  wire       rst_n,
+    input  wire       guest_reset_n,
     input  wire       cfg_psg_enable,
     input  wire       ce_psg,
     input  wire       ay_req,
@@ -70,8 +71,11 @@ module ay_3_8912 #(
     wire write_register = cfg_psg_enable && ay_req && ay_op == 2'd1 && selected_valid;
     wire write_shape = write_register && selected == 4'd13;
     wire [7:0] registers [0:15];
-    always @(posedge clk_sys or negedge reset_n) begin
-        if (!reset_n) begin
+    always @(posedge clk_sys or negedge rst_n) begin
+        if (!rst_n) begin
+            selected <= 0;
+            selected_valid <= 1'b1;
+        end else if (!guest_reset_n) begin
             selected <= 0;
             selected_valid <= 1'b1;
         end else if (cfg_psg_enable && ay_req && ay_op == 2'd0) begin
@@ -85,8 +89,10 @@ module ay_3_8912 #(
         for (index = 0; index < 16; index = index + 1) begin : register_file
             localparam [3:0] ADDRESS = index;
             reg [7:0] value;
-            always @(posedge clk_sys or negedge reset_n) begin
-                if (!reset_n)
+            always @(posedge clk_sys or negedge rst_n) begin
+                if (!rst_n)
+                    value <= 0;
+                else if (!guest_reset_n)
                     value <= 0;
                 else if (write_register && selected == ADDRESS)
                     value <= ay_wdata & register_mask(index);
@@ -102,7 +108,7 @@ module ay_3_8912 #(
     wire [7:0] port_b_value = registers[7][7] ? registers[15] : 8'hff;
     always @* begin
         ay_rdata = 8'hff;
-        if (reset_n && cfg_psg_enable && selected_valid) begin
+        if (rst_n && guest_reset_n && cfg_psg_enable && selected_valid) begin
             case (selected)
                 4'd14: ay_rdata = port_a_value;
                 4'd15: ay_rdata = port_b_value;
@@ -120,8 +126,12 @@ module ay_3_8912 #(
     reg [4:0] noise_count;
     reg [16:0] noise;
     wire [4:0] noise_elapsed = noise_count + 5'd1;
-    always @(posedge clk_sys or negedge reset_n) begin
-        if (!reset_n) begin
+    always @(posedge clk_sys or negedge rst_n) begin
+        if (!rst_n) begin
+            divider <= 0;
+            noise_count <= 0;
+            noise <= 17'd1;
+        end else if (!guest_reset_n) begin
             divider <= 0;
             noise_count <= 0;
             noise <= 17'd1;
@@ -147,8 +157,16 @@ module ay_3_8912 #(
     wire [15:0] env_period = {registers[12], registers[11]};
     wire [16:0] env_elapsed = env_count + 17'd1;
     wire [3:0] env_level = env_step ^ {4{env_attack}};
-    always @(posedge clk_sys or negedge reset_n) begin
-        if (!reset_n) begin
+    always @(posedge clk_sys or negedge rst_n) begin
+        if (!rst_n) begin
+            env_divider <= 0;
+            env_count <= 0;
+            env_step <= 0;
+            env_attack <= 1'b0;
+            env_alternate <= 1'b0;
+            env_hold <= 1'b0;
+            env_stopped <= 1'b1;
+        end else if (!guest_reset_n) begin
             env_divider <= 0;
             env_count <= 0;
             env_step <= 0;
@@ -197,8 +215,12 @@ module ay_3_8912 #(
             wire [11:0] elapsed = count + 12'd1;
             wire gate = (registers[7][index] || tone) &&
                         (registers[7][index+3] || noise[0]);
-            always @(posedge clk_sys or negedge reset_n) begin
-                if (!reset_n) begin
+            always @(posedge clk_sys or negedge rst_n) begin
+                if (!rst_n) begin
+                    count <= 0;
+                    tone <= 1'b0;
+                    sample <= 0;
+                end else if (!guest_reset_n) begin
                     count <= 0;
                     tone <= 1'b0;
                     sample <= 0;
