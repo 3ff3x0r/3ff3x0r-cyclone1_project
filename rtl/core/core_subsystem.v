@@ -69,9 +69,16 @@ module core_subsystem (
     input  wire [7:0]  disk_rdata,
     output wire        disk_motor
 );
-    wire cpu_on = rst_n && cpu_reset_n && (boot_overlay || guest_reset_n);
+    wire cpu_run = cpu_reset_n && (boot_overlay || guest_reset_n);
+    reg  cpu_on;
+    always @(posedge clk_sys or negedge rst_n) begin
+        if (!rst_n)
+            cpu_on <= 1'b0;
+        else
+            cpu_on <= cpu_run;
+    end
     wire guest_on = cpu_on && !boot_overlay && cfg_valid;
-    wire guest_state_n = rst_n && guest_reset_n && !boot_overlay;
+    wire guest_run = guest_reset_n && !boot_overlay;
     wire [2:0] timing_id = cfg_valid && !boot_overlay ? cfg_timing_id : 3'd0;
     wire is_plus3 = cfg_paging_id == 3'd3;
     wire is_tk = timing_id == 3'd3 || timing_id == 3'd4;
@@ -107,7 +114,7 @@ module core_subsystem (
     wire [21:0] physical_addr;
     wire io_done;
     spectrum_mmu mmu (
-        .clk_sys(clk_sys), .reset_n(guest_state_n), .paging_id(cfg_paging_id),
+        .clk_sys(clk_sys), .rst_n(rst_n), .run(guest_run), .paging_id(cfg_paging_id),
         .rom_valid_mask(cfg_rom_valid_mask), .addr(addr),
         .port_write(io_done && !wr_n), .port_data(cpu_DO[5:0]),
         .beta_enable(cfg_disk_kind == 2'd2 && cfg_paging_id == 3'd4 &&
@@ -324,11 +331,11 @@ module core_subsystem (
         .asic_bus(asic_bus)
     );
 
-    assign psg_ce = ce_psg && guest_state_n && cfg_valid && cfg_psg_enable;
+    assign psg_ce = ce_psg && rst_n && guest_run && cfg_valid && cfg_psg_enable;
     assign ay_wdata = cpu_DO;
     assign disk_wdata = cpu_DO;
     spectrum_io io (
-        .clk_sys(clk_sys), .reset_n(guest_state_n), .addr(addr), .wdata(cpu_DO[4:0]),
+        .clk_sys(clk_sys), .rst_n(rst_n), .run(guest_run), .addr(addr), .wdata(cpu_DO[4:0]),
         .cycle_done(io_done), .write_cycle(!wr_n), .is_tk(is_tk), .is_plus3(is_plus3),
         .paging_locked(paging_locked), .floating_bus(floating_bus), .asic_bus(asic_bus),
         .key_matrix_n(key_matrix_n), .joy1(joy1), .joy2(joy2), .cfg_input_map_id(cfg_input_map_id),

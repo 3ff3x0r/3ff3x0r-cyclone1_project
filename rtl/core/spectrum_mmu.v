@@ -1,6 +1,7 @@
 module spectrum_mmu (
     input  wire        clk_sys,
-    input  wire        reset_n,
+    input  wire        rst_n,
+    input  wire        run,
     input  wire [2:0]  paging_id,
     input  wire [3:0]  rom_valid_mask,
     input  wire [15:0] addr,
@@ -43,8 +44,13 @@ module spectrum_mmu (
     assign physical_addr = is_ram ? {5'd0, ram_bank, addr[13:0]} :
                                     {6'd2, rom_slot, addr[13:0]};
 
-    always @(posedge clk_sys or negedge reset_n) begin
-        if (!reset_n) begin
+    always @(posedge clk_sys or negedge rst_n) begin
+        if (!rst_n) begin
+            page_7ffd <= 6'd0;
+            page_1ffd <= 4'd0;
+            beta_rom <= 1'b0;
+            opcode_seen <= 1'b0;
+        end else if (!run) begin
             page_7ffd <= 6'd0;
             page_1ffd <= 4'd0;
             beta_rom <= 1'b0;

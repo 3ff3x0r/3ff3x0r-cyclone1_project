@@ -1,6 +1,7 @@
 module spectrum_io (
     input  wire        clk_sys,
-    input  wire        reset_n,
+    input  wire        rst_n,
+    input  wire        run,
     input  wire [15:0] addr,
     input  wire [4:0]  wdata,
     input  wire        cycle_done,
@@ -103,8 +104,12 @@ module spectrum_io (
             rdata = disk_rdata;
     end
 
-    always @(posedge clk_sys or negedge reset_n) begin
-        if (!reset_n) begin
+    always @(posedge clk_sys or negedge rst_n) begin
+        if (!rst_n) begin
+            border <= 3'd0;
+            mic_bit <= 1'b0;
+            beeper_bit <= 1'b0;
+        end else if (!run) begin
             border <= 3'd0;
             mic_bit <= 1'b0;
             beeper_bit <= 1'b0;
