@@ -5,6 +5,21 @@ cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.."
 build=$(mktemp -d "${TMPDIR:-/tmp}/spectrum-core.XXXXXX")
 printf 'Build and logs are in %s\n' "$build"
 
+run_iverilog() {
+    local top=$1 language=$2
+    shift 2
+    iverilog "$language" -s "$top" -o "$build/$top.vvp" "rtl/core/tb/$top.v" "$@"
+    vvp "$build/$top.vvp" | tee "$build/$top.log"
+    if rg -q '^FAIL' "$build/$top.log" || ! rg -q '^PASS' "$build/$top.log"; then
+        return 1
+    fi
+}
+
+run_iverilog spectrum_mmu_tb -g2001 rtl/core/spectrum_mmu.v
+if [[ ${1:-} == --mmu-only ]]; then
+    exit 0
+fi
+
 donor=vendor/ZX_Spectrum-128K_MIST/T80
 rtl=(rtl/core/{core_subsystem,spectrum_mmu,spectrum_io,spectrum_ula}.v)
 wrapper=rtl/core/spectrum_cpu.vhd
@@ -80,15 +95,6 @@ YOSYS
 yosys -Q -T -s "$build/core.ys" > "$build/yosys.log"
 printf 'PASS integrated Yosys check, zero combinational loops, latches and inferred RAMs\n'
 
-run_iverilog() {
-    local top=$1 language=$2
-    shift 2
-    iverilog "$language" -s "$top" -o "$build/$top.vvp" "rtl/core/tb/$top.v" "$@"
-    vvp "$build/$top.vvp" | tee "$build/$top.log"
-    if rg -q '^FAIL' "$build/$top.log" || ! rg -q '^PASS' "$build/$top.log"; then
-        return 1
-    fi
-}
 run_iverilog core_subsystem_tb -g2001 "${rtl[@]}" "$build/cpu_netlist.v"
 run_iverilog spectrum_ula_tb -g2001 rtl/core/spectrum_ula.v
 # Ticket B's existing SDRAM verification model uses SystemVerilog casts.

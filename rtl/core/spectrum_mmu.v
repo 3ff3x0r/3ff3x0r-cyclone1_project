@@ -58,7 +58,7 @@ module spectrum_mmu (
         end else begin
             if (port_write && plus3 && select_1ffd && !paging_locked)
                 page_1ffd <= port_data[3:0];
-            if (port_write && paged && select_7ffd && !paging_locked && !beta_active)
+            if (port_write && paged && select_7ffd && !paging_locked)
                 page_7ffd <= port_data;
 
             opcode_seen <= opcode_read;
