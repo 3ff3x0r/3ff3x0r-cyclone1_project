@@ -135,11 +135,10 @@ module trhmsx_bringup_top (
     reg video_reset_n;
 
     // Cyclone I fabric clock at 85.90908 MHz. No divided clock is routed.
-    wire [5:0] pll_clocks;
     /* verilator lint_off UNUSEDSIGNAL */
-    wire [4:0] unused_pll_clocks;
+    wire [5:0] pll_clocks;
     /* verilator lint_on UNUSEDSIGNAL */
-    assign {unused_pll_clocks, clk_4x} = pll_clocks;
+    assign clk_4x = pll_clocks[0];
 
     altpll #(
         .intended_device_family("Cyclone"),
