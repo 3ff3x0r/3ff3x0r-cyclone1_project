@@ -170,7 +170,7 @@ module video_scandoubler (
     // Its only capture is on the edge after the two-flop bank synchronizer
     // changes. Constrain the bundled paths to settle within two clk_vga
     // periods (with setup margin) when integrating independent clocks.
-    (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED IF ASYNCHRONOUS" *)
+    (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED" *)
     reg [1:0] bank_sync;
     reg bank_seen;
     reg have_line_start;
