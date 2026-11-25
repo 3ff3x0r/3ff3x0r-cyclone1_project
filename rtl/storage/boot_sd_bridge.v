@@ -85,8 +85,7 @@ module boot_sd_bridge (
     always @(posedge clk_sys) begin
         if (receive_byte)
             sector_buffer[offset[8:0]] <= sd_blk_rx_data;
-        if (data_fetch)
-            sector_byte <= sector_buffer[offset[8:0]];
+        sector_byte <= sector_buffer[offset[8:0]];
     end
 
     always @(posedge clk_sys or negedge rst_n) begin

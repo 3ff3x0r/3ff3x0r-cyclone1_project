@@ -78,7 +78,7 @@ module sd_spi_reader #(
     end
 
     // Keep MOSI stable on the rising edge and advance it on the falling edge.
-    always @(posedge clk_sys) begin
+    always @(posedge clk_sys or negedge rst_n) begin
         if (!rst_n) begin
             sd_sck <= 0;
             shifting <= 0;
@@ -157,7 +157,7 @@ module sd_spi_reader #(
         end
     endtask
 
-    always @(posedge clk_sys) begin
+    always @(posedge clk_sys or negedge rst_n) begin
         if (!rst_n) begin
             state <= IDLE;
             after_gap <= IDLE;
